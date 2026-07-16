@@ -5,3 +5,13 @@ packages:
 allowBuilds:
   esbuild: true
   semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/b9e368f34fa71300d1070e34a93d5b66be91dfed: true
+
+# This workspace compile-checks the SDK types but does not ship or execute the
+# Codex CLI. Runnable composition packages must opt into their native binary.
+ignoredOptionalDependencies:
+  - "@openai/codex-darwin-arm64"
+  - "@openai/codex-darwin-x64"
+  - "@openai/codex-linux-arm64"
+  - "@openai/codex-linux-x64"
+  - "@openai/codex-win32-arm64"
+  - "@openai/codex-win32-x64"

@@ -53,7 +53,26 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
 
+  packages/adapter-codex-sdk:
+    dependencies:
+      "@intentabi/codex-host":
+        specifier: workspace:*
+        version: link:../codex-host
+    devDependencies:
+      "@openai/codex-sdk":
+        specifier: 0.144.4
+        version: 0.144.4
+
   packages/adapter-semwitness:
+    dependencies:
+      "@intentabi/core":
+        specifier: workspace:*
+        version: link:../core
+      semwitness:
+        specifier: github:aantenore/semwitness#b9e368f34fa71300d1070e34a93d5b66be91dfed
+        version: https://codeload.github.com/aantenore/semwitness/tar.gz/b9e368f34fa71300d1070e34a93d5b66be91dfed
+
+  packages/codex-host:
     dependencies:
       "@intentabi/core":
         specifier: workspace:*
@@ -375,6 +394,21 @@ packages:
     peerDependencies:
       "@emnapi/core": ^1.7.1
       "@emnapi/runtime": ^1.7.1
+
+  "@openai/codex-sdk@0.144.4":
+    resolution:
+      {
+        integrity: sha512-JtND4npLaM1jKlTJVGU3XaX7xqnRG62yusz13kPgialnfd0CBrjOgXFGSRojYcvWZSggQoEkZBVAGtoKE0y8sw==,
+      }
+    engines: { node: ">=18" }
+
+  "@openai/codex@0.144.4":
+    resolution:
+      {
+        integrity: sha512-DTHzYatlKq9dw55E0/HsbK4tRCEKabuJ10ybbqpsG8gVv/kvwEdg3Z4OI3cvLXKa21xkIa4lkGlZoO/HmqmFFw==,
+      }
+    engines: { node: ">=16" }
+    hasBin: true
 
   "@oxc-project/types@0.139.0":
     resolution:
@@ -1481,6 +1515,14 @@ packages:
         integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==,
       }
 
+ignoredOptionalDependencies:
+  - "@openai/codex-darwin-arm64"
+  - "@openai/codex-darwin-x64"
+  - "@openai/codex-linux-arm64"
+  - "@openai/codex-linux-x64"
+  - "@openai/codex-win32-arm64"
+  - "@openai/codex-win32-x64"
+
 snapshots:
   "@ai-sdk/gateway@4.0.16(zod@4.4.3)":
     dependencies:
@@ -1609,6 +1651,12 @@ snapshots:
       "@emnapi/runtime": 1.11.1
       "@tybys/wasm-util": 0.10.3
     optional: true
+
+  "@openai/codex-sdk@0.144.4":
+    dependencies:
+      "@openai/codex": 0.144.4
+
+  "@openai/codex@0.144.4": {}
 
   "@oxc-project/types@0.139.0": {}
 
