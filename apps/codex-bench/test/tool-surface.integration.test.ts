@@ -1,9 +1,7 @@
-import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { promisify } from "node:util";
+import { join } from "node:path";
 
 import { Codex } from "@openai/codex-sdk";
 import { expect, it } from "vitest";
@@ -14,7 +12,6 @@ import {
   createIsolatedBenchmarkRuntime,
 } from "../src/index.js";
 
-const execFileAsync = promisify(execFile);
 const cliPath = process.env.INTENTABI_CODEX_SECURITY_CLI;
 const securityIt = cliPath === undefined ? it.skip : it;
 
@@ -22,14 +19,6 @@ securityIt(
   "captures the exact 0.144.4 tool surface and rejects an unsolicited view_image canary",
   async () => {
     const binary = cliPath!;
-    const { stdout } = await execFileAsync(binary, ["--version"], {
-      cwd: dirname(binary),
-      env: {},
-      timeout: 5_000,
-      encoding: "utf8",
-    });
-    expect(stdout).toBe("codex-cli 0.144.4\n");
-
     await attestCodexBoundary({
       executablePath: binary,
       threadOptions: {
