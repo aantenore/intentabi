@@ -5,10 +5,11 @@ whether different user phrasings can safely converge on the same typed intent
 beside a real application route. It never serves candidate content, skips the
 ordinary route, or treats similarity as cache authorization.
 
-The first vertical slice integrates Agentic SDLC. SemWitness remains the sole
-owner of Intent IR, normalization witnesses, and qualification. IntentABI sees
-only keyed, scope/route-bound correlation metadata through an anti-corruption
-adapter.
+The first contract slices integrate Agentic SDLC and a Codex SDK shadow host.
+SemWitness remains the sole owner of Intent IR, verified preparation,
+normalization witnesses, evaluation, and promotion. The trusted Codex host sees
+request content in process; IntentABI core, telemetry, and sinks receive only
+keyed, scope/route-bound evidence through anti-corruption adapters.
 
 ## Why This Exists
 
@@ -25,10 +26,14 @@ This alpha proves a narrow contract:
 - an untrusted nomination store can report only `found`/`not found`, and a hit
   is labeled `unverified-candidate-observed`;
 - the ordinary route remains the only source of application output;
+- the Codex shadow host can observe a SemWitness-prepared candidate while
+  submitting the original input byte-for-byte to `Thread.run`;
 - evidence is emitted in an authenticated, content-free envelope.
 
-It does **not** prove broad paraphrase recall, token savings, cache safety, or
-lower model latency.
+It does **not** prove broad paraphrase recall, token savings, cache safety,
+lower model latency, or safe prompt rewriting. The Codex path is deliberately
+passthrough-only until held-out task and provider-usage evidence passes the
+existing SemWitness gates.
 
 ## Run the Source Alpha
 
@@ -93,6 +98,12 @@ checkout, set `AGENTIC_SDLC_ENTRYPOINT`, `AGENTIC_SDLC_ROOT`, and a host-derived
 - timeout-aware ports receive `AbortSignal` and event IDs for cooperative
   cancellation/idempotency; a timed-out sink is reported `unacknowledged`;
 - stdout application output is never mixed into the stderr evidence event.
+- Codex candidates, prompts, outputs, working directories, and run options
+  never appear raw in shadow evidence; proof content is reduced to presence;
+- Codex transport receives only the captured original input; candidate,
+  preparer timeout, malformed evidence, and sink failure cannot replace it;
+- structured text/image SDK inputs bypass preparation and retain their exact
+  object identity in the passthrough transport.
 
 ## Workspace
 
@@ -100,6 +111,8 @@ checkout, set `AGENTIC_SDLC_ENTRYPOINT`, `AGENTIC_SDLC_ROOT`, and a host-derived
 packages/core                 provider-agnostic runtime and ports
 packages/adapter-semwitness   semantic authority and route-binding adapter
 packages/adapter-agentic-sdlc typed fixture and trusted CLI routes
+packages/codex-host             SemWitness-preparer/Codex transport host
+packages/adapter-codex-sdk      pinned Thread factory and passthrough adapter
 packages/store-memory         metadata-only development nomination store
 apps/cli                      first Agentic SDLC host composition
 ```
@@ -114,8 +127,8 @@ alpha.
 ## Non-goals for `v0.1`
 
 No embeddings, vector database, network model provider, active cache, response
-reuse, prompt rewriting, transparent Codex-composer interception, production
-multi-tenant store, or npm release. The exact-alias fixture proves contracts;
-it is not a claim of universal natural-language equivalence.
+reuse, transformed Codex submission, transparent composer interception,
+production multi-tenant store, or npm release. The exact-alias fixture proves
+contracts; it is not a claim of universal natural-language equivalence.
 
 Apache-2.0.

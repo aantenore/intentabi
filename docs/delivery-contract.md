@@ -35,6 +35,17 @@ or an installable npm release. Those require held-out and operational evidence.
 - [x] Agentic SDLC adapter accepts current object-shaped canonical intents,
       excludes raw text, redacts child errors, snapshots options, and handles
       paths with spaces.
+- [x] Codex SDK shadow host composes the public SemWitness preparer without
+      copying its evaluator, corpus, or promotion rules.
+- [x] Codex transport receives only the captured original input; verified
+      candidates are HMAC-only observations and cannot be submitted.
+- [x] Non-text input, malformed/faulted/timed-out preparation, opaque options,
+      and evidence-sink failure preserve the ordinary Codex path.
+- [x] Factory-bound `Thread.run` adapter preserves exact input, options
+      identity, output, and missing-options call shape against pinned official
+      SDK `0.144.4` types.
+- [x] Codex evidence uses scope-bound HMACs, strict detached verification, and
+      an atomic replay-guard port; no envelope is emitted without a binding.
 
 ## Promotion Gates
 
@@ -52,6 +63,12 @@ Active cache work is forbidden until all of these are true:
 8. an explicit versioned contract authorizes active mode.
 
 Until then, `mode: "active"` is rejected and no candidate-content API exists.
+
+Transformed Codex submission is a separate promotion gate. It additionally
+requires counterbalanced ordinary/candidate runs, deterministic task/diff
+oracles, provider-reported SDK or App Server usage, tool and approval parity,
+zero measured task regressions, and positive net value under the existing
+SemWitness host-promotion contract. SDK shadow evidence cannot authorize it.
 
 ## Source-alpha Definition of Done
 

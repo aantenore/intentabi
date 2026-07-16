@@ -14,6 +14,12 @@ The core also owns no SemWitness, Agentic SDLC, storage, or CLI configuration.
 Those composition schemas live in `apps/cli`; other hosts can replace every
 port without changing the core ABI.
 
+`@intentabi/codex-host` is a separate application boundary, not another
+normalizer or evaluator. It consumes SemWitness's public `TextRequestPreparer`
+contract and a provider-neutral exact-turn transport. It never imports or
+reimplements the SemWitness normalizer corpus, statistical bounds, host
+promotion evaluator, or intent-cache promotion evaluator.
+
 ## Runtime Flow
 
 ```mermaid
@@ -105,6 +111,33 @@ validates and reconstructs exact metadata before mutation, honors cancellation,
 and cannot retain response bodies. A production candidate index still needs
 authenticated records, partitioning, durability, revocation, freshness, and an
 independent SemWitness admission step.
+
+### Codex Shadow Host
+
+The host captures a string input, starts bounded SemWitness preparation, and
+invokes `CodexTurnTransport.runExact` exactly once with the captured original.
+The prepared content and safe SemWitness metadata are reduced immediately to
+domain-separated HMACs and are never returned to the caller, evidence sink, or
+transport. Proof content is not re-parsed: evidence records only
+`present-unverified`, leaving semantic proof authority in SemWitness. Non-text
+SDK inputs bypass preparation and pass through by object identity.
+
+The SDK adapter validates and freezes one complete `ThreadOptions` snapshot,
+passes that same object to `startThread`, and derives the transport binding from
+it. Omitted SDK fields remain `unavailable:not-explicit`; external `CodexOptions`
+and runtime defaults remain `unavailable:external-client`. Prompt/tool/AGENTS
+digests are separately labeled `host-declared-unverified`. Turn options and
+outputs are opaque and explicitly unbound: the host never reflects on either.
+
+`@intentabi/adapter-codex-sdk` compile-checks the official stable
+`Thread.run(input, options?)` contract against exact dev dependency `0.144.4`.
+Native Codex CLI optionals are excluded from this source-only workspace; a
+runnable composition package must opt into its platform binary. A version
+change requires contract tests before the compatibility claim moves.
+
+SemWitness preparation currently returns identity for unpromoted user prose.
+That is expected. Intent normalization is evidence for equivalence research,
+not authorization to rewrite a Codex prompt or serve a semantic-cache value.
 
 ## Extension Points
 

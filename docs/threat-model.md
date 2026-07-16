@@ -40,6 +40,11 @@ principal and authorization state from its authenticated context.
 | Secret propagation                | secret env names cannot collide with child allowlist; selected name is explicitly removed                              | allowed executables can inspect project files and their own arguments                  |
 | Mutable/symlink path substitution | realpath/stat checks and options snapshot; entrypoint file hash in route revision                                      | transitive imports and post-check filesystem replacement need OS hardening             |
 | Dependency drift                  | SemWitness pinned to immutable commit and lock integrity                                                               | Git dependency prevents normal package distribution and depends on GitHub availability |
+| Codex candidate substitution      | host calls exact transport once with captured original; candidate is HMAC-only and absent from result/transport types  | hostile replacement of the host or transport remains inside the trusted application    |
+| Preparer common-mode error        | SemWitness owns preparation/evaluation; IntentABI adds no second evaluator; Codex path stays original-only             | generator and proof components still need independent held-out task evaluation         |
+| SDK option/output observation     | host never reflects on either object; exact options and output identities pass through with explicit unbound sentinels | a trusted SDK adapter may separately map provider receipts                             |
+| Sink mutation/replay              | strict verifier checks shape/key/binding/MAC; uncertain acknowledgement returns the same event for idempotent retry    | production guard needs persistent unique insert/SETNX and key rotation                 |
+| Uncancellable preparation         | bounded success-path wait is labeled; transport errors abort observation and rethrow immediately                       | third-party preparer work may continue until process/worker isolation terminates it    |
 
 ## Key Handling
 
@@ -52,6 +57,14 @@ scope-epoch changes intentionally break longitudinal equality linkage.
 No raw prompt, output, semantic SHA digest, or scope label is used as a fallback
 identifier. Failures before trusted bindings exist use constant
 `unavailable:*` sentinels; HMAC failure suppresses the evidence envelope.
+
+The Codex host also forbids raw candidate/proof material in evidence. Candidate
+and original text plus safe SemWitness metadata become scope-bound HMACs; proof
+content becomes presence only. Thread configuration is covered by a keyed
+binding. Opaque turn options and output are not inspected and use explicit
+unbound sentinels. The SDK exposes provider-reported usage and basic lifecycle
+events, but this slice maps rather than persists them; App Server remains useful
+for richer approvals, tools, history, and control-plane events.
 
 ## Explicit Non-production Components
 
