@@ -24,6 +24,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           path: intentabi workspace
+          persist-credentials: false
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
           version: 11.13.0
@@ -34,6 +35,37 @@ jobs:
           cache-dependency-path: intentabi workspace/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - name: Install pinned Codex tool-surface fixture
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          PREFIX="${RUNNER_TEMP}/intentabi-codex-0.144.4"
+          ARCHIVE="${PREFIX}/codex-0.144.4-linux-x64.tgz"
+          mkdir -p "${PREFIX}"
+          curl \
+            --proto '=https' \
+            --tlsv1.2 \
+            --fail \
+            --location \
+            --retry 3 \
+            'https://registry.npmjs.org/@openai/codex/-/codex-0.144.4-linux-x64.tgz' \
+            --output "${ARCHIVE}"
+          printf '%s  %s\n' \
+            'da3c6b995ebeffb78135d839ba18663843c5bb6a36f1e618fc294bcd68520471fcba8ddfd8a035cfd250715b7095b4e85b4de710f944cd83587c2175501aac55' \
+            "${ARCHIVE}" | sha512sum --check --strict
+          tar --extract --gzip --file "${ARCHIVE}" --directory "${PREFIX}"
+          CODEX_BINARY="${PREFIX}/package/vendor/x86_64-unknown-linux-musl/bin/codex"
+          test -f "${CODEX_BINARY}"
+          test -x "${CODEX_BINARY}"
+          printf '%s  %s\n' \
+            '2b3edc9cdfd1717fba3dbc92817205a8a2c7511d459e456d4817eeff6f78ed7a' \
+            "${CODEX_BINARY}" | sha256sum --check --strict
+          printf 'INTENTABI_CODEX_SECURITY_CLI=%s\n' "${CODEX_BINARY}" >> "${GITHUB_ENV}"
+      - name: Verify pinned Codex tool boundary
+        if: runner.os == 'Linux'
+        run: >-
+          pnpm --filter @intentabi/codex-bench exec vitest run
+          test/tool-surface.integration.test.ts
       - name: Run CLI fixture smoke
         env:
           INTENTABI_HMAC_SECRET: intentabi-ci-fixture-key-32-bytes-minimum
@@ -52,6 +84,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           path: intentabi workspace
+          persist-credentials: false
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
           version: 11.13.0

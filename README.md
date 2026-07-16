@@ -11,6 +11,17 @@ normalization witnesses, evaluation, and promotion. The trusted Codex host sees
 request content in process; IntentABI core, telemetry, and sinks receive only
 keyed, scope/route-bound evidence through anti-corruption adapters.
 
+An additional research-only Codex benchmark composition can validate and plan a
+paired baseline/candidate experiment entirely offline. Provider execution needs
+two explicit CLI consent flags and produces only a content-free conformance
+receipt; it cannot create promotion evidence or an activation manifest. Real
+runs additionally pin and privately stage the exact CLI, run a public boundary
+canary, and use a fresh minimal Git workspace. Every arm gets a one-request
+loopback gateway: the real provider key remains in the parent process, while
+the Codex child receives only a per-arm proxy key. Configurable call, input,
+output, duration, and response-byte budgets fail closed; automated tests use
+only fake upstreams and make no real provider calls.
+
 ## Why This Exists
 
 Semantic caching is valuable only after equivalence, scope, authorization,
@@ -113,9 +124,17 @@ packages/adapter-semwitness   semantic authority and route-binding adapter
 packages/adapter-agentic-sdlc typed fixture and trusted CLI routes
 packages/codex-host             SemWitness-preparer/Codex transport host
 packages/adapter-codex-sdk      pinned Thread factory and passthrough adapter
+packages/benchmark-core         provider-neutral paired conformance runner
 packages/store-memory         metadata-only development nomination store
 apps/cli                      first Agentic SDLC host composition
+apps/codex-bench              opt-in Codex SDK research composition
 ```
+
+See [Codex benchmark](docs/codex-benchmark.md) for offline validation, explicit
+execution, binary pinning, gateway/resource limits, workspace/process
+isolation, and the limits of the resulting measurements. Real runs belong on a
+dedicated clean host/container/VM because system/MDM configuration and legacy
+Codex notifications cannot be neutralized absolutely from inside the process.
 
 Read [architecture](docs/architecture.md),
 [delivery contract](docs/delivery-contract.md),
@@ -126,9 +145,11 @@ alpha.
 
 ## Non-goals for `v0.1`
 
-No embeddings, vector database, network model provider, active cache, response
-reuse, transformed Codex submission, transparent composer interception,
-production multi-tenant store, or npm release. The exact-alias fixture proves
-contracts; it is not a claim of universal natural-language equivalence.
+No embeddings, vector database, active cache, response reuse, transformed
+Codex submission, transparent composer interception, production multi-tenant
+store, or npm release. The runtime and shadow path remain provider-free; the
+separate, double-opt-in Codex benchmark can call a network model provider only
+as a research-conformance diagnostic. The exact-alias fixture proves contracts;
+it is not a claim of universal natural-language equivalence.
 
 Apache-2.0.

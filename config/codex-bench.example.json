@@ -1,0 +1,38 @@
+{
+  "schema": "io.github.aantenore.intentabi/codex-bench-config/v1alpha1",
+  "classification": "research-conformance",
+  "codex": {
+    "codexPathOverride": "../vendor/codex-0.144.4",
+    "expectedCliVersion": "0.144.4",
+    "expectedExecutableDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "authentication": {
+      "apiKeyEnv": "INTENTABI_CODEX_API_KEY"
+    },
+    "thread": {
+      "model": "replace-with-an-explicit-codex-model",
+      "sandboxMode": "read-only",
+      "skipGitRepoCheck": false,
+      "modelReasoningEffort": "medium",
+      "networkAccessEnabled": false,
+      "webSearchMode": "disabled",
+      "webSearchEnabled": false,
+      "approvalPolicy": "never"
+    },
+    "turnTimeoutMs": 60000
+  },
+  "benchmark": {
+    "seed": "conformance-v1",
+    "maxCases": 8,
+    "maxProviderCalls": 16,
+    "maxInputBytes": 16384,
+    "maxDatasetBytes": 65536,
+    "maxOutputTokensPerCall": 256,
+    "maxTotalOutputTokens": 4096,
+    "maxRunDurationMs": 960000,
+    "maxGatewayResponseBytes": 1048576
+  },
+  "evidence": {
+    "hmacSecretEnv": "INTENTABI_BENCH_HMAC_SECRET",
+    "keyId": "codex-bench-v1"
+  }
+}

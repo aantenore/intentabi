@@ -1,0 +1,36 @@
+{
+  "schema": "io.github.aantenore.intentabi/codex-bench-dataset/v1alpha1",
+  "classification": "research-conformance",
+  "id": "public-conformance-v1",
+  "split": "conformance",
+  "cases": [
+    {
+      "id": "simple-cold",
+      "stratum": "simple",
+      "cacheRegime": "cold",
+      "original": "Return exactly the word READY and nothing else.",
+      "candidate": "Output only: READY"
+    },
+    {
+      "id": "simple-cold-2",
+      "stratum": "simple",
+      "cacheRegime": "cold",
+      "original": "Return exactly the word STEADY and nothing else.",
+      "candidate": "Output only: STEADY"
+    },
+    {
+      "id": "simple-warm-1",
+      "stratum": "simple",
+      "cacheRegime": "warm",
+      "original": "Return exactly the word STABLE and nothing else.",
+      "candidate": "Output only: STABLE"
+    },
+    {
+      "id": "simple-warm-2",
+      "stratum": "simple",
+      "cacheRegime": "warm",
+      "original": "Return exactly the word CONSISTENT and nothing else.",
+      "candidate": "Output only: CONSISTENT"
+    }
+  ]
+}

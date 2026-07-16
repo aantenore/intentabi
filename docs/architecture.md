@@ -139,6 +139,29 @@ SemWitness preparation currently returns identity for unpromoted user prose.
 That is expected. Intent normalization is evidence for equivalence research,
 not authorization to rewrite a Codex prompt or serve a semantic-cache value.
 
+### Codex Research Benchmark
+
+`@intentabi/benchmark-core` is a provider-neutral paired-run contract. It owns
+per-stratum/cache-block counterbalanced AB/BA planning, HMAC-authenticated
+content-free receipts, strict accounting projection, and research-only
+classification; it has no SDK or transport dependency. `@intentabi/codex-bench`
+is a separate opt-in composition that binds that contract to the exact Codex
+SDK/CLI `0.144.4` surface.
+
+Each arm gets a fresh client/thread and a one-request loopback gateway. The
+Codex child holds only a per-arm proxy credential; the parent gateway verifies
+the exact input, instructions, text-only model, and `update_plan`-only surface,
+projects a deterministic request, and alone holds the real upstream key. The
+custom provider disables WebSockets and transport retries, while the persisted
+provider URL fails closed until replaced by the live gateway URL. A public
+fake-upstream canary exercises the staged binary before private cases run.
+
+This is measurement infrastructure, not an activation path. Plans and receipts
+carry HMAC references and key lineage but no prompts or responses. A keyed MAC
+covers the complete canonical receipt body, while the protocol digest binds
+versioned core/composition/gateway semantics and exact runtime policy. Results
+remain diagnostic and cannot create a SemWitness promotion manifest.
+
 ## Extension Points
 
 The core ports replace the route, inspector, nomination index, HMAC provider,

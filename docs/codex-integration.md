@@ -50,14 +50,17 @@ check tautological and is not a supported verification pattern.
 `@intentabi/adapter-codex-sdk` creates the thread from one validated frozen
 `ThreadOptions` snapshot, then derives the evidence binding from that same
 snapshot. Its compile-time contract is pinned to official SDK `0.144.4`.
-Native CLI optionals are deliberately ignored in this source-only workspace;
-the future runnable composition package must install its platform binary.
+Native CLI optionals are deliberately ignored workspace-wide. The separate
+research benchmark requires an explicit binary path/version/digest, copies the
+binary into a private staging directory, and rechecks it around every arm.
 
 The SDK already reports `RunResult.usage` and exposes basic streamed lifecycle
 events. `normalizeCodexUsage` maps a caller-supplied SDK-shaped value without
 inventing totals or savings; it does not yet claim provider provenance. The
-adapter does not collect or persist a binding-correlated receipt, so no measured
-token-saving claim exists.
+adapter does not collect or persist a binding-correlated receipt. The separate
+`@intentabi/codex-bench` composition can emit a content-free, locally
+HMAC-authenticated conformance receipt, but it remains diagnostic and does not
+establish a token-saving product claim.
 
 This is functional passthrough instrumentation, not token reduction. The
 current SemWitness preparer returns identity unless an exact codec/policy,
@@ -71,11 +74,12 @@ Any future active transformation must declare tokenizer/model/prompt-prefix
 scope, preserve tool and approval contracts, measure cold/warm behavior, and
 pass SemWitness held-out task-quality, unsafe-accept, and net-value gates.
 
-The next runnable slice composes SDK, SemWitness, host, and sink and records
-provider-reported usage for counterbalanced baseline/candidate evaluation. App
-Server over local stdio JSONL remains the richer control-plane option for
-approval, tool, history, and event parity. WebSocket transport and active
-prompt rewriting remain out of scope.
+The opt-in research slice now composes a provider-neutral paired benchmark with
+the pinned SDK/CLI and records host-observed provider usage for block-
+counterbalanced baseline/candidate evaluation. App Server over local stdio JSONL
+remains the richer control-plane option for approval, tool, history, and event
+parity. The benchmark explicitly disables WebSocket transport; active prompt
+rewriting remains out of scope.
 
 Agentic SDLC remains an application consumer: its plugin may launch the wrapper
 or observatory, but the provider-agnostic runtime remains in this separate

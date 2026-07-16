@@ -1,0 +1,43 @@
+{
+  "name": "@intentabi/benchmark-core",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "description": "Provider-neutral paired benchmark contracts for research-only IntentABI conformance runs.",
+  "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
+  "homepage": "https://github.com/aantenore/intentabi#readme",
+  "bugs": {
+    "url": "https://github.com/aantenore/intentabi/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aantenore/intentabi.git",
+    "directory": "packages/benchmark-core"
+  },
+  "keywords": [
+    "agentic-ai",
+    "benchmark",
+    "codex",
+    "conformance",
+    "llm-evaluation"
+  ],
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json",
+    "prepack": "pnpm run build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

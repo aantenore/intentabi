@@ -45,6 +45,10 @@ principal and authorization state from its authenticated context.
 | SDK option/output observation     | host never reflects on either object; exact options and output identities pass through with explicit unbound sentinels | a trusted SDK adapter may separately map provider receipts                             |
 | Sink mutation/replay              | strict verifier checks shape/key/binding/MAC; uncertain acknowledgement returns the same event for idempotent retry    | production guard needs persistent unique insert/SETNX and key rotation                 |
 | Uncancellable preparation         | bounded success-path wait is labeled; transport errors abort observation and rethrow immediately                       | third-party preparer work may continue until process/worker isolation terminates it    |
+| Benchmark provider-key disclosure | real key remains in parent gateway; Codex child receives a random per-arm proxy credential                             | a hostile parent process or same-user debugger remains inside the trusted host         |
+| Benchmark transport bypass        | custom no-WebSocket/no-retry provider; fail-closed static URL; public canary; exact one-request loopback gateway       | system/MDM hooks and legacy notifications still require a dedicated clean host         |
+| Benchmark content persistence     | fresh private runtime, normal cleanup, dead-lease startup scavenger, content-free receipts                             | abrupt termination leaves raw sessions until the next cleanup or manual removal        |
+| Benchmark receipt mutation        | domain-separated HMAC over the complete canonical receipt body with explicit key lineage                               | local verifier still depends on secure key custody and trusted host code               |
 
 ## Key Handling
 

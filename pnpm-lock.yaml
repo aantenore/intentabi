@@ -44,6 +44,24 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
 
+  apps/codex-bench:
+    dependencies:
+      "@intentabi/adapter-codex-sdk":
+        specifier: workspace:*
+        version: link:../../packages/adapter-codex-sdk
+      "@intentabi/benchmark-core":
+        specifier: workspace:*
+        version: link:../../packages/benchmark-core
+      "@intentabi/core":
+        specifier: workspace:*
+        version: link:../../packages/core
+      "@openai/codex-sdk":
+        specifier: 0.144.4
+        version: 0.144.4
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
   packages/adapter-agentic-sdlc:
     dependencies:
       "@intentabi/core":
@@ -71,6 +89,8 @@ importers:
       semwitness:
         specifier: github:aantenore/semwitness#b9e368f34fa71300d1070e34a93d5b66be91dfed
         version: https://codeload.github.com/aantenore/semwitness/tar.gz/b9e368f34fa71300d1070e34a93d5b66be91dfed
+
+  packages/benchmark-core: {}
 
   packages/codex-host:
     dependencies:
