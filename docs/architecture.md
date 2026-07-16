@@ -1,0 +1,114 @@
+# Architecture
+
+## Boundary
+
+IntentABI is a runtime and evidence plane, not a second intent framework.
+SemWitness owns Intent IR parsing/canonicalization, source and scope HMACs,
+compiler/registry contracts, normalization witnesses, and promotion decisions.
+
+`@intentabi/adapter-semwitness` uses only public SemWitness exports. The core
+receives keyed correlation bindings, a read-only eligibility state, and
+allowlisted reason codes. It cannot construct, inspect, or mutate Intent IR.
+
+The core also owns no SemWitness, Agentic SDLC, storage, or CLI configuration.
+Those composition schemas live in `apps/cli`; other hosts can replace every
+port without changing the core ABI.
+
+## Runtime Flow
+
+```mermaid
+flowchart LR
+  R["Shadow request"] --> O["Ordinary application route"]
+  R --> S["SemWitness inspector"]
+  S --> B["Trusted operation-to-route binding"]
+  B -->|"eligible keyed metadata"| M["Unverified nomination index"]
+  B -->|"mismatch or bypass"| E["Content-free evidence"]
+  M --> E
+  O --> D["Ordinary output on stdout"]
+  O -->|"keyed output digest"| E
+  E --> A["Authenticated envelope on stderr"]
+```
+
+The ordinary route and shadow inspection start concurrently. The public result
+waits for bounded shadow deadlines because it returns evidence alongside output;
+this is bounded blocking, not a detached background job. Shadow failures change
+evidence only, never the ordinary output.
+
+## Semantic-to-Execution Lineage
+
+`source` and `routeInput` are different representations and cannot be trusted to
+match merely because they arrived in one request. The SemWitness adapter captures
+the normalized registry operation ID and checks it against a trusted exact
+`operationId -> routeInput` binding. It then derives keyed bindings over:
+
+- SemWitness policy, normalizer artifact/config, and ontology;
+- host-derived scope and scope epoch;
+- route ID and immutable revision digest;
+- the exact canonical route input.
+
+A missing or different route binding yields `ROUTE_INPUT_MISMATCH`. The route
+still executes, but no candidate probe occurs and the run is excluded from
+convergence measurements.
+
+## Fail-closed Reuse, Fail-open Availability
+
+There is no active reuse path. `ShadowCandidateStore` exposes only
+`probe(intentKey, signal)` and `observe(metadata, signal)`. A positive probe is
+reported as `unverified-candidate-observed`; it is not proof that an authentic
+or safe cache record exists. Candidate content is absent from the type system.
+
+The runtime strictly parses inspector and store results at runtime. Malformed
+values, unknown fields, non-read effects, route mismatches, scope mismatches,
+and unknown reason codes cannot reach observation telemetry as eligible data.
+
+## Evidence Envelope
+
+Before delivery, the runtime creates a unique event ID and computes an HMAC over
+`{schema, eventId, keyId, evidence}`. The sink receives the envelope and MAC
+together. Policy/scope/route/input bindings are already inside the signed
+evidence, so fields cannot be spliced between events without detection.
+
+Replay detection remains a sink responsibility: `eventId` is the idempotency
+key. If the HMAC provider fails, no bare evidence is emitted. A sink deadline is
+reported as `unacknowledged`, because third-party adapters can ignore
+cooperative cancellation even though the bundled sink and memory store honor it.
+
+## Adapters
+
+### SemWitness
+
+The adapter copies its key material, uses constant-time comparison for expected
+scope bindings, invokes `normalizeIntentShadow`, verifies the trusted route
+binding, and exports only domain-separated HMAC keys. Its `intentKey` is a
+shadow correlation key, **not** SemWitness's future cache-admission key.
+
+### Agentic SDLC
+
+- `FixtureAgenticSdlcRoute` is deterministic and used for conformance.
+- `AgenticSdlcCliRoute` invokes only `route decide` through
+  `execFile(process.execPath, ...)` with `shell: false`.
+- the exported strict schema supports current object-shaped entities, artifacts,
+  and missing-context fields;
+- raw user text is never passed to the child;
+- child failures become constant, content-free error codes;
+- entrypoint/root paths are canonicalized, options/environment are snapshotted,
+  output/time are bounded, and route identity combines entrypoint hash plus a
+  host-owned deployment revision digest.
+
+The entrypoint is trusted and retains the current user's filesystem/network
+authority. `allowedRoot` is a routing boundary, not an OS sandbox.
+
+### Memory Store
+
+The bundled store is single-process, single-scope, and development-only. It
+validates and reconstructs exact metadata before mutation, honors cancellation,
+and cannot retain response bodies. A production candidate index still needs
+authenticated records, partitioning, durability, revocation, freshness, and an
+independent SemWitness admission step.
+
+## Extension Points
+
+The core ports replace the route, inspector, nomination index, HMAC provider,
+and evidence sink. Provider/model selection stays outside core. Any probabilistic
+compiler remains non-authoritative behind SemWitness; any future active cache
+must consume SemWitness's complete scope/dependency-aware admission contract.
