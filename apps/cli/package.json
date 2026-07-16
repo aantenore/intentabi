@@ -38,7 +38,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json",
     "prepack": "pnpm run build",
     "shadow": "tsx src/bin.ts shadow run",
     "test": "vitest run",
