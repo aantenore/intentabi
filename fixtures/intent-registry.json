@@ -1,0 +1,87 @@
+{
+  "schema": "semwitness.dev/intent-operation-registry/v1alpha1",
+  "ontology": {
+    "id": "agentic-sdlc-intents",
+    "version": "1.0.0",
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "minimumConfidencePpm": 1000000,
+  "operations": [
+    {
+      "id": "read-project-status",
+      "aliases": [
+        {
+          "locale": "en-US",
+          "text": "Show the current Agentic SDLC project status."
+        },
+        {
+          "locale": "en-US",
+          "text": "What is the status of this SDLC project?"
+        },
+        {
+          "locale": "it-IT",
+          "text": "Mostra lo stato corrente del progetto Agentic SDLC."
+        }
+      ],
+      "intent": {
+        "schema": "semwitness.dev/intent-ir/v1alpha1",
+        "ontology": {
+          "id": "agentic-sdlc-intents",
+          "version": "1.0.0",
+          "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "goal": {
+          "namespace": "agentic-sdlc",
+          "action": "read",
+          "object": "project-status",
+          "polarity": "affirm"
+        },
+        "slots": [],
+        "constraints": [],
+        "temporal": {
+          "kind": "none"
+        },
+        "output": {
+          "format": "json",
+          "locale": "en-US",
+          "detail": "summary"
+        },
+        "effect": "read"
+      }
+    },
+    {
+      "id": "delete-project",
+      "aliases": [
+        {
+          "locale": "en-US",
+          "text": "Delete the current Agentic SDLC project."
+        }
+      ],
+      "intent": {
+        "schema": "semwitness.dev/intent-ir/v1alpha1",
+        "ontology": {
+          "id": "agentic-sdlc-intents",
+          "version": "1.0.0",
+          "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "goal": {
+          "namespace": "agentic-sdlc",
+          "action": "delete",
+          "object": "project",
+          "polarity": "affirm"
+        },
+        "slots": [],
+        "constraints": [],
+        "temporal": {
+          "kind": "none"
+        },
+        "output": {
+          "format": "json",
+          "locale": "en-US",
+          "detail": "exact"
+        },
+        "effect": "irreversible"
+      }
+    }
+  ]
+}

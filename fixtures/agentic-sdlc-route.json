@@ -1,0 +1,16 @@
+{
+  "schema": "io.github.aantenore.intentabi/agentic-sdlc-fixture/v1alpha1",
+  "routeId": "agentic-sdlc.fixture",
+  "cases": [
+    {
+      "input": {
+        "command": "status",
+        "project": "demo"
+      },
+      "output": {
+        "phase": "implementation",
+        "source": "ordinary-route"
+      }
+    }
+  ]
+}

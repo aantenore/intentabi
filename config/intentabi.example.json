@@ -1,0 +1,37 @@
+{
+  "schema": "io.github.aantenore.intentabi/config/v1alpha1",
+  "mode": "shadow",
+  "semwitness": {
+    "registryPath": "../fixtures/intent-registry.json",
+    "policyDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "hmacSecretEnv": "INTENTABI_HMAC_SECRET",
+    "scopeEpoch": "demo-v1",
+    "expectedScope": {
+      "tenant": "demo",
+      "authorization": "reader"
+    },
+    "routeBindings": {
+      "read-project-status": {
+        "command": "status",
+        "project": "demo"
+      }
+    }
+  },
+  "agenticSdlc": {
+    "kind": "fixture",
+    "fixturePath": "../fixtures/agentic-sdlc-route.json"
+  },
+  "store": {
+    "kind": "memory",
+    "faultMode": "none"
+  },
+  "timeouts": {
+    "inspectionMs": 500,
+    "storeMs": 250,
+    "evidenceSinkMs": 100
+  },
+  "evidence": {
+    "sink": "stderr",
+    "keyId": "demo-v1"
+  }
+}

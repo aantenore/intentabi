@@ -1,0 +1,47 @@
+{
+  "name": "@intentabi/adapter-semwitness",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "description": "Source-only SemWitness qualification adapter for IntentABI.",
+  "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
+  "homepage": "https://github.com/aantenore/intentabi#readme",
+  "bugs": {
+    "url": "https://github.com/aantenore/intentabi/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aantenore/intentabi.git",
+    "directory": "packages/adapter-semwitness"
+  },
+  "keywords": [
+    "agentic-ai",
+    "intent-normalization",
+    "semantic-cache",
+    "semwitness",
+    "typescript"
+  ],
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "pnpm run build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@intentabi/core": "workspace:*",
+    "semwitness": "github:aantenore/semwitness#b9e368f34fa71300d1070e34a93d5b66be91dfed"
+  }
+}

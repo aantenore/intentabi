@@ -1,0 +1,51 @@
+{
+  "name": "intentabi-workspace",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "description": "Shadow-only intent normalization runtime with proof-carrying SemWitness evidence.",
+  "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
+  "homepage": "https://github.com/aantenore/intentabi#readme",
+  "bugs": {
+    "url": "https://github.com/aantenore/intentabi/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aantenore/intentabi.git"
+  },
+  "keywords": [
+    "agentic-ai",
+    "context-engineering",
+    "intent-normalization",
+    "llm",
+    "prompt-caching",
+    "semantic-cache",
+    "semwitness",
+    "typescript"
+  ],
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@11.13.0",
+  "scripts": {
+    "build": "pnpm -r --if-present run build",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "oxlint --deny-warnings apps packages",
+    "prepack": "pnpm run build",
+    "shadow": "tsx apps/cli/src/bin.ts shadow run",
+    "smoke:agentic-sdlc": "pnpm run build && node scripts/smoke-agentic-sdlc.mjs",
+    "test": "pnpm run build && pnpm -r --if-present run test",
+    "typecheck": "pnpm run build && pnpm -r --if-present run typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "oxlint": "1.74.0",
+    "prettier": "3.9.5",
+    "tsx": "4.23.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}

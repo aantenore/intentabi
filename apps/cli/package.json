@@ -1,0 +1,54 @@
+{
+  "name": "@intentabi/cli",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "description": "Source-only CLI for running IntentABI shadow qualification.",
+  "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
+  "homepage": "https://github.com/aantenore/intentabi#readme",
+  "bugs": {
+    "url": "https://github.com/aantenore/intentabi/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aantenore/intentabi.git",
+    "directory": "apps/cli"
+  },
+  "keywords": [
+    "agentic-ai",
+    "cli",
+    "intent-normalization",
+    "semantic-cache",
+    "typescript"
+  ],
+  "type": "module",
+  "license": "Apache-2.0",
+  "bin": {
+    "intentabi": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "pnpm run build",
+    "shadow": "tsx src/bin.ts shadow run",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@intentabi/adapter-agentic-sdlc": "workspace:*",
+    "@intentabi/adapter-semwitness": "workspace:*",
+    "@intentabi/core": "workspace:*",
+    "@intentabi/store-memory": "workspace:*",
+    "zod": "4.4.3"
+  }
+}

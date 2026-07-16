@@ -1,0 +1,9 @@
+{
+  "schema": "io.github.aantenore.intentabi/shadow-request/v1alpha1",
+  "source": "Show the current Agentic SDLC project status.",
+  "locale": "en-US",
+  "routeInput": {
+    "command": "status",
+    "project": "demo"
+  }
+}
