@@ -8,7 +8,6 @@ import {
   lstat,
   mkdir,
   mkdtemp,
-  open,
   readFile,
   readdir,
   realpath,
@@ -17,7 +16,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 
 import { VERIFIED_CODEX_SDK_VERSION } from "@intentabi/adapter-codex-sdk";
@@ -33,6 +32,11 @@ import {
   type BenchmarkReceipt,
   type ProviderUsageObservation,
 } from "@intentabi/benchmark-core";
+import {
+  CliIoError,
+  reservePrivateArtifact,
+  type PrivateArtifactReservation,
+} from "@intentabi/cli-io";
 import { createHmacOpaqueDigester } from "@intentabi/core";
 import {
   Codex,
@@ -57,6 +61,7 @@ import {
 const execFileAsync = promisify(execFile);
 const SHA_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 const MAX_EXECUTABLE_BYTES = 512 * 1024 * 1024;
+const MAX_BENCHMARK_RECEIPT_BYTES = 16 * 1024 * 1024;
 const GATEWAY_REQUEST_OVERHEAD_BYTES = 2 * 1024 * 1024;
 const RUNTIME_DIRECTORY_PREFIX = "intentabi-codex-runtime-";
 const BINARY_DIRECTORY_PREFIX = "intentabi-codex-bin-";
@@ -1249,81 +1254,35 @@ export async function writeBenchmarkReceipt(
 export async function reserveBenchmarkReceipt(
   path: string,
 ): Promise<BenchmarkReceiptReservation> {
-  const absolutePath = resolve(path);
-  const canonicalParent = await realpath(dirname(absolutePath));
-  const canonicalPath = join(canonicalParent, basename(absolutePath));
-  const parent = await lstat(canonicalParent);
-  if (
-    !parent.isDirectory() ||
-    (process.platform !== "win32" && (parent.mode & 0o022) !== 0) ||
-    (typeof process.getuid === "function" && parent.uid !== process.getuid())
-  ) {
-    throw new BenchmarkInvariantFailure(
-      "Receipt output directory is not a trusted canonical directory",
-    );
-  }
-  const handle = await open(canonicalPath, "wx", 0o600);
-  const identity = await handle.stat();
-  let settled = false;
-  return Object.freeze({
-    commit: async (receipt: BenchmarkReceipt) => {
-      if (settled) throw new TypeError("Receipt reservation is already closed");
-      try {
-        if (!(await isSameReservedFile(canonicalPath, identity))) {
-          throw new BenchmarkInvariantFailure(
-            "Receipt reservation path changed before commit",
-          );
-        }
-        await handle.writeFile(`${JSON.stringify(receipt, null, 2)}\n`, {
-          encoding: "utf8",
-        });
-        await handle.sync();
-        if (!(await isSameReservedFile(canonicalPath, identity))) {
-          throw new BenchmarkInvariantFailure(
-            "Receipt reservation path changed during commit",
-          );
-        }
-        await handle.close();
-        settled = true;
-      } catch (error) {
-        settled = true;
-        await handle.close().catch(() => undefined);
-        await removeSameReservedFile(canonicalPath, identity);
-        throw error;
-      }
-    },
-    abort: async () => {
-      if (settled) return;
-      settled = true;
-      await handle.close().catch(() => undefined);
-      await removeSameReservedFile(canonicalPath, identity);
-    },
-  });
-}
-
-async function isSameReservedFile(
-  path: string,
-  identity: Readonly<{ dev: number; ino: number }>,
-): Promise<boolean> {
+  let reservation: PrivateArtifactReservation;
   try {
-    const current = await lstat(path);
-    return (
-      current.isFile() &&
-      current.dev === identity.dev &&
-      current.ino === identity.ino
+    reservation = await reservePrivateArtifact(
+      path,
+      MAX_BENCHMARK_RECEIPT_BYTES,
     );
   } catch {
-    return false;
+    throw new BenchmarkInvariantFailure("Receipt output could not be reserved");
   }
-}
-
-async function removeSameReservedFile(
-  path: string,
-  identity: Readonly<{ dev: number; ino: number }>,
-): Promise<void> {
-  if (await isSameReservedFile(path, identity)) {
-    await rm(path, { force: true });
-  }
+  return Object.freeze({
+    commit: async (receipt: BenchmarkReceipt) => {
+      try {
+        await reservation.commit(
+          Buffer.from(`${JSON.stringify(receipt, null, 2)}\n`, "utf8"),
+        );
+      } catch (error) {
+        if (
+          error instanceof CliIoError &&
+          error.code === "RESERVATION_CLOSED"
+        ) {
+          throw new TypeError("Receipt reservation is already closed");
+        }
+        throw new BenchmarkInvariantFailure(
+          "Receipt output could not be published",
+        );
+      }
+    },
+    abort: () => reservation.abort(),
+  });
 }
 
 export function projectSdkUsage(

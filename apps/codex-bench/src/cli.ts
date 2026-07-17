@@ -1,10 +1,11 @@
-import { open, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 import type {
   BenchmarkArmRunner,
   BenchmarkReceipt,
 } from "@intentabi/benchmark-core";
+import { readBoundedRegularFile } from "@intentabi/cli-io";
 
 import {
   createBenchmarkPlan,
@@ -252,36 +253,11 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
 }
 
 async function readJson(path: string): Promise<unknown> {
-  let handle: Awaited<ReturnType<typeof open>> | undefined;
   try {
-    handle = await open(path, "r");
-    const file = await handle.stat();
-    if (
-      !file.isFile() ||
-      !Number.isSafeInteger(file.size) ||
-      file.size <= 0 ||
-      file.size > MAX_BENCHMARK_JSON_BYTES
-    ) {
-      throw new Error();
-    }
-    const buffer = Buffer.allocUnsafe(file.size + 1);
-    let total = 0;
-    while (total < buffer.byteLength) {
-      const { bytesRead } = await handle.read(
-        buffer,
-        total,
-        buffer.byteLength - total,
-        total,
-      );
-      if (bytesRead === 0) break;
-      total += bytesRead;
-    }
-    if (total !== file.size) throw new Error();
-    return JSON.parse(buffer.subarray(0, total).toString("utf8"));
+    const source = await readBoundedRegularFile(path, MAX_BENCHMARK_JSON_BYTES);
+    return JSON.parse(Buffer.from(source).toString("utf8"));
   } catch {
     throw new PublicCliError("Benchmark input could not be read");
-  } finally {
-    await handle?.close().catch(() => undefined);
   }
 }
 

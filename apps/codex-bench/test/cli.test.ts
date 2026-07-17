@@ -1,4 +1,4 @@
-import { readFile, rm, truncate, writeFile } from "node:fs/promises";
+import { readFile, rm, symlink, truncate, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -106,6 +106,36 @@ describe("Codex benchmark CLI", () => {
       );
       expect(dependencies.preflight).not.toHaveBeenCalled();
       expect(dependencies.execute).not.toHaveBeenCalled();
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a symlinked benchmark input before provider access", async () => {
+    if (process.platform === "win32") return;
+    const directory = await mkdtemp(resolve(tmpdir(), "intentabi-json-link-"));
+    const alias = resolve(directory, "dataset.json");
+    const dependencies = {
+      preflight: vi.fn(),
+      execute: vi.fn(),
+      reserveReceipt: vi.fn(),
+    } as never;
+    try {
+      await symlink(datasetPath, alias);
+      const result = await invoke(
+        ["validate", "--config", configPath, "--dataset", alias],
+        {},
+        dependencies,
+      );
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr.join("")).toContain(
+        "Benchmark input could not be read",
+      );
+      expect(result.stderr.join("")).not.toContain(alias);
+      expect(dependencies.preflight).not.toHaveBeenCalled();
+      expect(dependencies.execute).not.toHaveBeenCalled();
+      expect(dependencies.reserveReceipt).not.toHaveBeenCalled();
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

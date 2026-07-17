@@ -7,7 +7,6 @@ import {
   mkdtemp,
   readFile,
   realpath,
-  rename,
   rm,
   stat,
   writeFile,
@@ -271,19 +270,38 @@ describe("CodexSdkArmRunner", () => {
 });
 
 describe("Codex executable and runtime isolation", () => {
-  it("does not delete a different file swapped into a receipt reservation path", async () => {
-    const parent = await mkdtemp(join(tmpdir(), "intentabi-receipt-swap-"));
+  it("publishes a complete private receipt atomically after reservation", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "intentabi-receipt-atomic-"));
     const path = join(parent, "receipt.json");
-    const moved = join(parent, "moved-reservation.json");
     try {
       const reservation = await reserveBenchmarkReceipt(path);
-      await rename(path, moved);
+      await expect(access(path)).rejects.toThrow();
+
+      await reservation.commit({ complete: true } as never);
+
+      expect(JSON.parse(await readFile(path, "utf8"))).toEqual({
+        complete: true,
+      });
+      if (process.platform !== "win32") {
+        expect((await stat(path)).mode & 0o777).toBe(0o600);
+      }
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("does not overwrite or delete a file that wins after reservation", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "intentabi-receipt-race-"));
+    const path = join(parent, "receipt.json");
+    try {
+      const reservation = await reserveBenchmarkReceipt(path);
       await writeFile(path, "DO NOT DELETE", { mode: 0o600 });
 
-      await reservation.abort();
-
       expect(await readFile(path, "utf8")).toBe("DO NOT DELETE");
-      await expect(access(moved)).resolves.toBeUndefined();
+      await expect(
+        reservation.commit({ complete: true } as never),
+      ).rejects.toBeInstanceOf(BenchmarkInvariantFailure);
+      expect(await readFile(path, "utf8")).toBe("DO NOT DELETE");
     } finally {
       await rm(parent, { recursive: true, force: true });
     }
