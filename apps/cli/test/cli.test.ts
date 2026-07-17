@@ -84,7 +84,7 @@ describe("intentabi shadow run", () => {
     await expect(runCli(["--help"], {}, io)).resolves.toBe(0);
     await expect(runCli(["--version"], {}, io)).resolves.toBe(0);
     expect(output[0]).toContain("intentabi shadow run");
-    expect(output[1]).toBe("0.1.0-alpha.1\n");
+    expect(output[1]).toBe("0.2.0-alpha.1\n");
   });
 
   it("executes the ordinary route but bypasses a mismatched semantic binding", async () => {

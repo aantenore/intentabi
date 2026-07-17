@@ -1,6 +1,6 @@
 {
   "name": "@intentabi/codex-host",
-  "version": "0.1.0-alpha.1",
+  "version": "0.2.0-alpha.1",
   "private": true,
   "description": "Source-only Codex shadow host that observes SemWitness preparation while submitting the original input.",
   "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",

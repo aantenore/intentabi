@@ -5,6 +5,8 @@ source-alpha and follows semantic-versioned prereleases.
 
 ## Unreleased
 
+## 0.2.0-alpha.1 - 2026-07-17
+
 ### Added
 
 - Provider-neutral cache-impact study comparing exact-request and normalized

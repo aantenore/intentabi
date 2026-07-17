@@ -1,6 +1,6 @@
 {
   "name": "@intentabi/adapter-agentic-sdlc",
-  "version": "0.1.0-alpha.1",
+  "version": "0.2.0-alpha.1",
   "private": true,
   "description": "Source-only Agentic SDLC route adapter for IntentABI.",
   "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
