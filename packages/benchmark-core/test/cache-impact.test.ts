@@ -71,11 +71,13 @@ function run(
 
 describe("cache impact study", () => {
   it("measures safe hit lift and net tokens for normalized paraphrases", async () => {
-    const report = await run([
+    const workload = [
       cacheCase(0, "first phrasing"),
       cacheCase(1, "equivalent phrasing"),
       { ...cacheCase(2, "first phrasing"), rawKey: hmac("a") },
-    ]);
+    ];
+    const report = await run(workload);
+    const replay = await run(workload);
 
     expect(report.summary.raw).toMatchObject({
       safeHits: 1,
@@ -97,6 +99,7 @@ describe("cache impact study", () => {
       netTotalDeltaVersusRaw: "108",
     });
     expect(report.summary.gate).toEqual({ passed: true, reasons: [] });
+    expect(replay).toEqual(report);
     expect(report).toMatchObject({
       mode: "shadow",
       activationAuthorized: false,
