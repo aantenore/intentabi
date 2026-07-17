@@ -2,46 +2,56 @@
 
 ## Product Claim
 
-The Qualification Lab is a provider-neutral host for counterbalanced shadow
-experiments. It runs an ordinary arm and a candidate arm against the same
-private case, asks a declared task oracle to compare their outcomes, and passes
-the complete observation to an evidence adapter. The core never interprets an
+The Qualification Lab is a provider-neutral planner and evidence handoff for
+counterbalanced shadow experiments. A host captures ordinary/candidate arms and
+seals exactly one authority-owned record per private case. The Lab binds those
+records to a predeclared plan, submits them to the configured authority, and
+publishes an authenticated content-free receipt. The core never interprets an
 intent, decides semantic equivalence, stores a reusable value, or activates a
 cache.
 
 SemWitness remains the only component that can assemble and evaluate an intent
-cache promotion artifact. A green Lab run means only that the experiment was
-complete, bounded, reproducible, and safe to submit to that authority. It does
-not mean that the candidate is qualified.
+cache promotion artifact. The CLI returns exit code `0` only when that authority
+qualifies the exact evidence, but its receipt still says
+`activationAuthorized: false`. Exit code `2` is a complete, valid, unqualified
+run; exit code `1` is an execution or boundary failure.
 
 ## Boundary
 
 ```mermaid
 flowchart LR
-  S["Private case source"] --> Q["Qualification core"]
-  Q -->|"ordinary or candidate"| E["Paired execution port"]
-  E --> O["Task oracle"]
-  O --> A["Host evidence adapter"]
-  A --> W["SemWitness workbench"]
-  W --> R["Content-free report"]
+  S["Private dataset metadata"] --> P["HMAC plan and pair order"]
+  P --> H["Host capture and record sealer"]
+  H --> E["Private sealed evidence"]
+  E --> Q["Qualification app and core"]
+  Q --> W["SemWitness authority"]
+  W --> A["Private exact artifact (0600)"]
+  Q --> R["Authenticated content-free receipt"]
 
-  Q -. "never persists" .-> P["Private input and artifacts"]
+  O["Optional versioned task oracle"] --> H
   W -. "only authority" .-> D["shadow qualification decision"]
 ```
 
-The core owns orchestration and bounded lifecycle only. Deployments provide
-replaceable ports for:
+The core owns deterministic planning, ordered record handoff, authority binding,
+cancellation, and receipt authentication only. Its replaceable ports are:
 
-- `QualificationCaseSource`: yields private cases in a predeclared order;
-- `PairedExecutionPort`: executes exactly one isolated ordinary or candidate
-  arm and returns an opaque artifact plus provider accounting;
-- `TaskOracle`: compares two opaque artifacts under a versioned task contract;
-- `QualificationEvidenceAdapter`: seals one complete or failed observation and
-  finalizes the run through an external authority;
-- `QualificationArtifactSink`: publishes the content-free artifact atomically.
+- `QualificationCaseRunner`: returns one already-sealed authority record for a
+  private payload and its immutable plan cell;
+- `QualificationAuthority`: validates all sealed records and returns the
+  decision plus ordered content-free bindings;
+- `authenticateReceipt`: MACs the complete canonical receipt body.
 
+File parsing and publication live in the application through `@intentabi/cli-io`.
 No core type contains a provider SDK, SemWitness type, Agentic SDLC schema,
-prompt, response, intent IR, tenant label, filesystem path, or cache value.
+prompt, response, intent IR, tenant label, filesystem path, or cache value. The
+core retains opaque payload/record references only for the duration of a run and
+never reflects on or serializes them.
+
+The Agentic SDLC adapter is a separate Level 0 oracle: it performs read-only
+`task start` replay in AB and BA order across four byte-identical roots and
+projects route, contract, outcome, and project state through HMACs. It does not
+invent or translate SemWitness promotion records; a host-owned capture adapter
+must still provide complete usage, oracle, scope, and dependency evidence.
 
 ## Experiment Contract
 
@@ -50,21 +60,27 @@ pair order. Population cases use one independence-cluster reference. Adversarial
 cases use a predeclared scenario and phenomena vocabulary. References are
 opaque keyed bindings supplied by the trusted host, never raw business labels.
 
-The runner enforces these invariants:
+The combined core, application, and host contract enforce these invariants at
+their respective trust boundaries:
 
 1. ordinals are contiguous and unique;
-2. case, call, byte, token, and wall-clock budgets are fixed before execution;
+2. case and file/record byte budgets are fixed before the app reads evidence;
+   provider call, token, and wall-clock budgets remain host-owned and must be
+   bound into the external attestation;
 3. ordinary/candidate order is balanced inside each declared stratum;
 4. each primary-order arm is invoked at most once with a fresh execution scope;
    an optional mirrored reverse order is a repeatability control and never a
    second statistical opportunity;
-5. the oracle runs only after both arms return complete observations;
-6. timeout, cancellation, malformed output, incomplete accounting, or oracle
-   failure becomes a failed evidence record, never a positive result;
+5. a host oracle runs only after both arms return complete observations;
+6. expected arm/oracle/accounting failures must arrive as authority-owned failed
+   records; an exception, timeout, cancellation, malformed port, or missing
+   record aborts publication and can never become a positive result;
 7. every attempted case is accounted for; cases are not silently dropped;
-8. raw inputs and artifacts are released after sealing and never enter the
-   returned report, logs, errors, or artifact path;
-9. the external workbench result is forwarded without repair or reinterpretation;
+8. raw inputs never enter receipts, stdout, errors, or paths; the exact sealed
+   evidence and authority workbench are persisted only in the explicitly
+   requested owner-only private artifact;
+9. the exact evidence bytes are reparsed and independently re-evaluated; a
+   detached workbench result is rejected rather than repaired or trusted;
 10. no code path can submit candidate content to a production request or read a
     cached response.
 
@@ -98,11 +114,45 @@ and a separately versioned active-mode contract.
 
 ## First Delivery Slice
 
-The first slice ships the provider-neutral runner, strict schemas, a separate
-`intentabi-qualify` application, deterministic fixture ports, a SemWitness
-handoff adapter, content-free receipts, and cross-platform tests. It proves the
-Level 0 contract and makes Level 1 evidence pluggable without weakening the
+The first slice ships the provider-neutral planner/runner, strict schemas, the
+separate `intentabi-qualify` application, a read-only Agentic SDLC oracle,
+SemWitness handoff, content-free receipts, reusable atomic private I/O, and
+cross-platform tests. `validate` reads no secret and performs no authority call;
+`plan` emits only HMAC-bound case references and pair order; `run` requires the
+explicit `--execute` flag, consumes already-sealed evidence, reserves its output
+before authority work, and atomically publishes complete `0600` bytes.
+
+The app does not call an LLM or synthesize evidence. Level 1 capture remains a
+separate opt-in, potentially billable host workflow. This slice proves the
+Level 0 boundaries and makes that evidence consumable without weakening the
 authority boundary.
+
+```bash
+# Schema/budget check only: no secret, execution, or authority call.
+pnpm qualify validate \
+  --config config/qualification.example.json \
+  --dataset /private/held-out-metadata.json
+
+# Content-free plan for the capture host.
+INTENTABI_QUALIFICATION_HMAC_SECRET="$(openssl rand -hex 32)" \
+  pnpm qualify plan \
+  --config config/qualification.example.json \
+  --dataset /private/held-out-metadata.json
+
+# Evaluate already-sealed records and publish a private exact artifact.
+INTENTABI_QUALIFICATION_HMAC_SECRET="<same-secret>" \
+  pnpm qualify run \
+  --config config/qualification.example.json \
+  --dataset /private/held-out-metadata.json \
+  --evidence /private/semwitness-input.json \
+  --out /private/qualification-artifact.json \
+  --execute
+```
+
+The example configuration contains placeholder protocol and key identifiers.
+Replacing them and supplying a real immutable private dataset/evidence artifact
+is part of the host's Level 1 protocol; the repository does not ship a fixture
+that can be mistaken for qualification evidence.
 
 It deliberately does not ship embeddings, a vector database, a semantic-cache
 engine, a general natural-language compiler, a response cache, or automatic
@@ -116,19 +166,22 @@ caches are future replaceable candidates or baselines, not code to reimplement.
 - the package core has no provider, SemWitness, Codex, or Agentic SDLC import;
 - a deterministic run counterbalances AB/BA per stratum and accounts for every
   attempted case;
-- malformed ports, incomplete usage, timeout, cancellation, and oracle failure
-  produce sealed failures and never a positive classification;
+- expected execution/accounting/oracle failures are supplied as sealed failure
+  records; malformed ports, thrown failures, and cancellation abort safely;
 - a repeated run with the same protocol and deterministic ports produces the
   same content-free result digest;
-- result artifacts contain no case payload, artifact, prompt, response, raw
-  label, tenant, path, provider error, or environment value;
+- public receipts/stdout/errors contain no case payload, prompt, response, raw
+  label, tenant, path, provider error, or environment value; the private
+  artifact intentionally retains the exact SemWitness evidence/workbench;
 - output uses bounded reads, an owner-only temporary sibling, flush/fsync,
   atomic no-clobber publication, and cleanup on failure;
 - the SemWitness adapter forwards already sealed records to the existing
-  assembler/evaluator and returns its authoritative result unchanged;
-- tests cover success, regression, arm failure, accounting failure, oracle
-  failure, timeout, abort, duplicate/gapped ordinals, imbalance, oversize input,
-  symlink/no-clobber output, privacy canaries, and deterministic replay;
+  assembler/evaluator, reparses the exact JSONL, and returns the independently
+  recomputed authoritative result;
+- tests cover qualified/unqualified flows, arm/order divergence, timeout,
+  cancellation, hostile getters/proxies, duplicate/gapped ordinals, imbalance,
+  oversize input, mutation races, symlink/no-clobber output, privacy canaries,
+  and deterministic replay;
 - `pnpm check`, dependency audit, and CI pass on Linux, macOS, and Windows.
 
 ### Must before a qualification claim

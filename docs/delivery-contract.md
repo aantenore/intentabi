@@ -17,7 +17,7 @@ or an installable npm release. Those require held-out and operational evidence.
 - [x] Core has no provider/application-specific composition schema.
 - [x] Strict, controlled-namespace, shadow-only host configuration.
 - [x] SemWitness consumed through public exports at immutable commit
-      `01683a35a7305a5f30dc35077b722f5515bc209c`.
+      `7f54e8021ae802b9e0ef3793e39a609cc0faf3b5` (`v0.5.0-alpha.5`).
 - [x] Trusted operation-to-route-input binding; mismatches bypass measurement.
 - [x] Ordinary Agentic SDLC route always executes and solely determines output.
 - [x] Nomination store cannot return content; positive probes stay unverified;
@@ -96,8 +96,22 @@ import exports, and run the CLI without Git/SSH-specific configuration.
 
 ## Qualification Lab Increment
 
-The next delivery increment is specified in
+The delivered increment is specified in
 [Qualification Lab](qualification-lab.md). It adds bounded provider-neutral
-paired execution and evidence orchestration while preserving SemWitness as the
-sole qualification authority. Its conformance result remains diagnostic and
-cannot relax any active-cache or transformed-Codex promotion gate above.
+planning and evidence orchestration while preserving SemWitness as the sole
+qualification authority. Its conformance result remains diagnostic and cannot
+relax any active-cache or transformed-Codex promotion gate above.
+
+- [x] Counterbalanced plans contain only HMAC-bound case/cell references.
+- [x] The generic core rejects hostile getters, proxies, sparse arrays,
+      cancellation, duplicate record digests, and authority/plan mismatches.
+- [x] `intentabi-qualify validate` performs no execution or authority call;
+      `plan` is content-free; `run` requires `--execute`.
+- [x] Exact sealed evidence is independently reparsed and re-evaluated by
+      SemWitness before a decision is projected.
+- [x] Public receipts remain content-free and activation-forbidden; exact
+      evidence/workbench bytes exist only in an atomic owner-only artifact.
+- [x] Agentic SDLC AB/BA replay is read-only, version-pinned, state-stable, and
+      returns HMAC-only route/contract/outcome observations.
+- [x] Shared CLI I/O rejects path substitution and publishes complete `0600`
+      artifacts with no-clobber semantics.

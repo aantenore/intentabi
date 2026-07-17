@@ -22,6 +22,13 @@ the Codex child receives only a per-arm proxy key. Configurable call, input,
 output, duration, and response-byte budgets fail closed; automated tests use
 only fake upstreams and make no real provider calls.
 
+The Qualification Lab is the evidence boundary after capture: it creates a
+counterbalanced HMAC-only plan, accepts host-sealed SemWitness records, and
+publishes an authenticated receipt plus a private exact authority artifact. It
+does not call a model, generate evidence, serve a cache hit, or authorize active
+reuse. A read-only Agentic SDLC adapter separately checks route, contract, and
+outcome stability in both AB and BA order without exposing task content.
+
 ## Why This Exists
 
 Semantic caching is valuable only after equivalence, scope, authorization,
@@ -101,6 +108,37 @@ checkout, set `AGENTIC_SDLC_ENTRYPOINT`, `AGENTIC_SDLC_ROOT`, and a host-derived
 `AGENTIC_SDLC_DEPLOYMENT_REVISION_DIGEST`, then run
 `pnpm smoke:agentic-sdlc`.
 
+## Run the Qualification Lab
+
+`validate` performs schema and budget checks without reading a secret or calling
+SemWitness. `plan` emits only HMAC-bound references. `run` consumes private,
+already-sealed evidence and requires explicit execution consent:
+
+```bash
+pnpm qualify validate \
+  --config config/qualification.example.json \
+  --dataset /private/held-out-metadata.json
+
+INTENTABI_QUALIFICATION_HMAC_SECRET="<at-least-32-bytes>" \
+  pnpm qualify plan \
+  --config config/qualification.example.json \
+  --dataset /private/held-out-metadata.json
+
+INTENTABI_QUALIFICATION_HMAC_SECRET="<same-secret>" \
+  pnpm qualify run \
+  --config config/qualification.example.json \
+  --dataset /private/held-out-metadata.json \
+  --evidence /private/semwitness-input.json \
+  --out /private/qualification-artifact.json \
+  --execute
+```
+
+Exit `0` means SemWitness qualified the exact evidence but still does not
+authorize activation; exit `2` is a valid unqualified result; exit `1` is a
+boundary/execution failure. The output file is atomically published as `0600`
+on POSIX and contains the private exact JSONL/workbench, while stdout is
+content-free. See [Qualification Lab](docs/qualification-lab.md).
+
 ## Safety Invariants
 
 - configuration accepts only `mode: "shadow"`;
@@ -127,15 +165,18 @@ checkout, set `AGENTIC_SDLC_ENTRYPOINT`, `AGENTIC_SDLC_ROOT`, and a host-derived
 ## Workspace
 
 ```text
-packages/core                 provider-agnostic runtime and ports
-packages/adapter-semwitness   route binding and SemWitness promotion orchestration
-packages/adapter-agentic-sdlc typed fixture and trusted CLI routes
-packages/codex-host             SemWitness-preparer/Codex transport host
-packages/adapter-codex-sdk      pinned Thread factory and passthrough adapter
-packages/benchmark-core         provider-neutral paired conformance runner
-packages/store-memory         metadata-only development nomination store
-apps/cli                      first Agentic SDLC host composition
-apps/codex-bench              opt-in Codex SDK research composition
+packages/core                    provider-agnostic runtime and ports
+packages/adapter-semwitness      route binding and SemWitness promotion orchestration
+packages/adapter-agentic-sdlc    typed fixture and trusted CLI routes
+packages/codex-host              SemWitness-preparer/Codex transport host
+packages/adapter-codex-sdk       pinned Thread factory and passthrough adapter
+packages/benchmark-core          provider-neutral paired conformance runner
+packages/qualification-core      provider-neutral plan/authority/receipt core
+packages/cli-io                  bounded reads and atomic private publication
+packages/store-memory            metadata-only development nomination store
+apps/cli                         first Agentic SDLC host composition
+apps/codex-bench                 opt-in Codex SDK research composition
+apps/qualification               offline SemWitness qualification handoff
 ```
 
 See [Codex benchmark](docs/codex-benchmark.md) for offline validation, explicit

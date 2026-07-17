@@ -194,12 +194,17 @@ must consume SemWitness's complete scope/dependency-aware admission contract.
 
 The [Qualification Lab](qualification-lab.md) is a separate application and
 package boundary. It reuses neither `ShadowRuntime` nor the Codex benchmark's
-content-bearing dataset types. Its core sees opaque private cases, opaque arm
-artifacts, opaque usage observations, and opaque sealed records through generic
-ports. A SemWitness edge adapter owns the only dependency on
-`semwitness/intent/host` and forwards complete host-sealed records to the
-existing authoritative assembler and evaluator.
+content-bearing dataset types. Its core sees only HMAC-bound plan metadata plus
+opaque private payload and already-sealed record references through generic
+ports; it never reflects on or serializes those values. A SemWitness edge
+adapter owns the only dependency on `semwitness/intent/host`, reparses the exact
+JSONL bytes, independently re-evaluates them, and forwards complete host-sealed
+records to the existing authoritative assembler/evaluator.
 
 This separation lets Agentic SDLC, Codex, a local model, or another application
-provide execution and oracle adapters without putting their schemas into the
-core or creating a second semantic authority.
+provide capture and oracle adapters without putting their schemas into the core
+or creating a second semantic authority. The shipped Agentic SDLC adapter is a
+read-only AB/BA route-contract-outcome oracle; it deliberately does not convert
+its result into SemWitness evidence. `apps/qualification` consumes records that
+the host has already sealed, publishes the exact private authority artifact via
+atomic `0600` I/O, and emits only an authenticated content-free receipt.
