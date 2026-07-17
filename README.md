@@ -64,7 +64,8 @@ existing SemWitness gates.
 ## Run the Source Alpha
 
 Requirements: Node.js 24+ and pnpm 11. The packages are intentionally private
-and source-checkout-only while SemWitness is pinned to an unreleased Git commit.
+and source-checkout-only while SemWitness is pinned to the immutable commit for
+the `v0.6.0-alpha.1` prerelease.
 
 ```bash
 pnpm install --frozen-lockfile

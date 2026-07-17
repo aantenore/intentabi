@@ -4,7 +4,7 @@ packages:
 
 allowBuilds:
   esbuild: true
-  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/7f54e8021ae802b9e0ef3793e39a609cc0faf3b5: true
+  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/de1e30509fdcf92f021dc0db06f3fa6ad1d48c80: true
 
 # Native Codex packages are ignored workspace-wide, so the research-only
 # codex-bench app requires and verifies an explicit codexPathOverride instead.

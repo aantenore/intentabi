@@ -111,8 +111,8 @@ importers:
         specifier: workspace:*
         version: link:../qualification-core
       semwitness:
-        specifier: github:aantenore/semwitness#7f54e8021ae802b9e0ef3793e39a609cc0faf3b5
-        version: https://codeload.github.com/aantenore/semwitness/tar.gz/7f54e8021ae802b9e0ef3793e39a609cc0faf3b5
+        specifier: github:aantenore/semwitness#de1e30509fdcf92f021dc0db06f3fa6ad1d48c80
+        version: https://codeload.github.com/aantenore/semwitness/tar.gz/de1e30509fdcf92f021dc0db06f3fa6ad1d48c80
 
   packages/benchmark-core: {}
 
@@ -124,8 +124,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       semwitness:
-        specifier: github:aantenore/semwitness#7f54e8021ae802b9e0ef3793e39a609cc0faf3b5
-        version: https://codeload.github.com/aantenore/semwitness/tar.gz/7f54e8021ae802b9e0ef3793e39a609cc0faf3b5
+        specifier: github:aantenore/semwitness#de1e30509fdcf92f021dc0db06f3fa6ad1d48c80
+        version: https://codeload.github.com/aantenore/semwitness/tar.gz/de1e30509fdcf92f021dc0db06f3fa6ad1d48c80
 
   packages/core:
     dependencies:
@@ -1360,14 +1360,14 @@ packages:
     engines: { node: ^20.19.0 || >=22.12.0 }
     hasBin: true
 
-  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/7f54e8021ae802b9e0ef3793e39a609cc0faf3b5:
+  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/de1e30509fdcf92f021dc0db06f3fa6ad1d48c80:
     resolution:
       {
         gitHosted: true,
-        integrity: sha512-SGb6GiG8WGEY+A1g0zWsCsJz2Vuy6lxIv8o5VosPall4JHWEjArJFIIj6/HHkjSu9VFvOr/hbC8qCQXkjvMeVg==,
-        tarball: https://codeload.github.com/aantenore/semwitness/tar.gz/7f54e8021ae802b9e0ef3793e39a609cc0faf3b5,
+        integrity: sha512-Y9lxNyNchE3PEz3KZqkGGFKsdQYyMZY4D5eL7wBX9f5FQfOkeqwuzEAnnR4K24JDZ8IQ1JWWG2eC9o695AkrvA==,
+        tarball: https://codeload.github.com/aantenore/semwitness/tar.gz/de1e30509fdcf92f021dc0db06f3fa6ad1d48c80,
       }
-    version: 0.5.0-alpha.5
+    version: 0.6.0-alpha.1
     engines: { node: ">=24" }
     hasBin: true
 
@@ -2120,7 +2120,7 @@ snapshots:
       "@rolldown/binding-win32-arm64-msvc": 1.1.5
       "@rolldown/binding-win32-x64-msvc": 1.1.5
 
-  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/7f54e8021ae802b9e0ef3793e39a609cc0faf3b5:
+  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/de1e30509fdcf92f021dc0db06f3fa6ad1d48c80:
     dependencies:
       "@ai-sdk/openai-compatible": 3.0.7(zod@4.4.3)
       "@ai-sdk/provider": 4.0.3
