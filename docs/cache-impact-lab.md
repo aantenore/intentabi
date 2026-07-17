@@ -103,6 +103,9 @@ but weaker than SemWitness promotion qualification.
 
 ## CLI
 
+In a fresh source checkout, run `pnpm install --frozen-lockfile` and
+`pnpm build` before invoking a workspace CLI.
+
 ```bash
 INTENTABI_HMAC_SECRET="<at-least-32-bytes>" \
   pnpm cache:impact \
