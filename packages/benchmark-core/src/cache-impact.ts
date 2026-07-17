@@ -5,6 +5,7 @@ import type {
   IntentInspector,
   Sha256Digest,
 } from "@intentabi/core";
+import { isProxy } from "node:util/types";
 
 export const CACHE_IMPACT_REPORT_SCHEMA =
   "io.github.aantenore.intentabi/cache-impact-report/v1alpha1" as const;
@@ -16,6 +17,9 @@ const SHA_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 const KEY_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
 const REASON_PATTERN = /^[A-Z][A-Z0-9_]{0,63}$/u;
 const MAX_CASES = 10_000;
+const MAX_ROUTE_INPUT_NODES = 100_000;
+const MAX_ROUTE_INPUT_STRING_CODE_UNITS = 1024 * 1024;
+const INVALID_JSON_SNAPSHOT = Symbol("invalid-json-snapshot");
 
 export interface CacheImpactUsage {
   /** Tokens observed for the ordinary model request on a cache miss. */
@@ -133,7 +137,9 @@ export async function runCacheImpactStudy(input: {
   if (
     cases.length === 0 ||
     cases.length > MAX_CASES ||
+    typeof input.keyId !== "string" ||
     !KEY_ID_PATTERN.test(input.keyId) ||
+    typeof input.datasetDigest !== "string" ||
     !HMAC_PATTERN.test(input.datasetDigest) ||
     !Number.isSafeInteger(input.inspectionTimeoutMs) ||
     input.inspectionTimeoutMs < 1 ||
@@ -290,7 +296,7 @@ export async function runCacheImpactStudy(input: {
   } catch {
     throw new TypeError("Cache impact report authentication failed");
   }
-  if (!HMAC_PATTERN.test(reportMac)) {
+  if (typeof reportMac !== "string" || !HMAC_PATTERN.test(reportMac)) {
     throw new TypeError(
       "Cache impact report authenticator returned invalid data",
     );
@@ -339,7 +345,7 @@ function projectInspection(value: IntentInspection): ProjectedInspection {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     return Object.freeze({ status: "inspector-failed" });
   }
-  let descriptors: PropertyDescriptorMap;
+  let descriptors: Record<string, PropertyDescriptor>;
   try {
     descriptors = Object.getOwnPropertyDescriptors(value);
   } catch {
@@ -365,11 +371,10 @@ function projectInspection(value: IntentInspection): ProjectedInspection {
 }
 
 function projectReasons(value: unknown): readonly string[] | null {
-  if (!Array.isArray(value) || value.length > 16) return null;
+  const values = snapshotDenseArray(value, 16);
+  if (values === null) return null;
   const reasons: string[] = [];
-  for (let index = 0; index < value.length; index += 1) {
-    if (!(index in value)) return null;
-    const reason = value[index];
+  for (const reason of values) {
     if (typeof reason !== "string" || !REASON_PATTERN.test(reason)) return null;
     reasons.push(reason);
   }
@@ -419,89 +424,302 @@ function summarizeStrategy(
 function snapshotCases(
   source: readonly CacheImpactCase[],
 ): readonly CacheImpactCase[] {
-  if (!Array.isArray(source) || source.length > MAX_CASES) {
+  const values = snapshotDenseArray(source, MAX_CASES);
+  if (values === null) {
     throw new TypeError("Cache impact case set is invalid");
   }
   const seen = new Set<string>();
-  return Object.freeze(
-    source.map((item) => {
-      if (
-        item === null ||
-        typeof item !== "object" ||
-        !HMAC_PATTERN.test(item.caseRef) ||
-        !HMAC_PATTERN.test(item.rawKey) ||
-        !SHA_PATTERN.test(item.expectedValueDigest) ||
-        seen.has(item.caseRef) ||
-        !validUsage(item.usage) ||
-        !validRequest(item.request)
-      ) {
-        throw new TypeError("Cache impact case set is invalid");
+  const result: CacheImpactCase[] = [];
+  for (const value of values) {
+    const item = snapshotRecord(value, [
+      "caseRef",
+      "expectedValueDigest",
+      "rawKey",
+      "request",
+      "usage",
+    ]);
+    const caseRef = item?.caseRef;
+    const rawKey = item?.rawKey;
+    const expectedValueDigest = item?.expectedValueDigest;
+    const request = snapshotRequest(item?.request);
+    const usage = snapshotUsage(item?.usage);
+    if (
+      typeof caseRef !== "string" ||
+      !HMAC_PATTERN.test(caseRef) ||
+      typeof rawKey !== "string" ||
+      !HMAC_PATTERN.test(rawKey) ||
+      typeof expectedValueDigest !== "string" ||
+      !SHA_PATTERN.test(expectedValueDigest) ||
+      seen.has(caseRef) ||
+      request === null ||
+      usage === null
+    ) {
+      throw new TypeError("Cache impact case set is invalid");
+    }
+    seen.add(caseRef);
+    result.push(
+      deepFreeze({
+        caseRef: caseRef as HmacEvidenceDigest,
+        rawKey: rawKey as HmacEvidenceDigest,
+        expectedValueDigest: expectedValueDigest as Sha256Digest,
+        request,
+        usage,
+      }),
+    );
+  }
+  return Object.freeze(result);
+}
+
+function snapshotUsage(value: unknown): CacheImpactUsage | null {
+  const record = snapshotRecord(value, [
+    "modelInputTokens",
+    "modelOutputTokens",
+    "normalizationInputTokens",
+    "normalizationOutputTokens",
+  ]);
+  if (record === null) return null;
+  const counters = [
+    record.modelInputTokens,
+    record.modelOutputTokens,
+    record.normalizationInputTokens,
+    record.normalizationOutputTokens,
+  ];
+  if (
+    !counters.every(
+      (item) =>
+        typeof item === "number" && Number.isSafeInteger(item) && item >= 0,
+    )
+  ) {
+    return null;
+  }
+  return Object.freeze({
+    modelInputTokens: record.modelInputTokens as number,
+    modelOutputTokens: record.modelOutputTokens as number,
+    normalizationInputTokens: record.normalizationInputTokens as number,
+    normalizationOutputTokens: record.normalizationOutputTokens as number,
+  });
+}
+
+function snapshotRequest(
+  value: unknown,
+): Omit<IntentInspectionRequest, "signal"> | null {
+  const request = snapshotRecord(value, [
+    "locale",
+    "route",
+    "routeInput",
+    "scope",
+    "scopeEpoch",
+    "source",
+  ]);
+  const scope = snapshotRecord(request?.scope, ["authorization", "tenant"]);
+  const route = snapshotRecord(request?.route, ["id", "revisionDigest"]);
+  if (
+    request === null ||
+    scope === null ||
+    route === null ||
+    typeof request.source !== "string" ||
+    request.source.length === 0 ||
+    request.source.length > 16_384 ||
+    typeof request.locale !== "string" ||
+    !/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,4}$/u.test(request.locale) ||
+    typeof request.scopeEpoch !== "string" ||
+    !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u.test(request.scopeEpoch) ||
+    typeof scope.tenant !== "string" ||
+    scope.tenant.length === 0 ||
+    scope.tenant.length > 256 ||
+    typeof scope.authorization !== "string" ||
+    scope.authorization.length === 0 ||
+    scope.authorization.length > 256 ||
+    typeof route.id !== "string" ||
+    !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u.test(route.id) ||
+    typeof route.revisionDigest !== "string" ||
+    !SHA_PATTERN.test(route.revisionDigest)
+  ) {
+    return null;
+  }
+  const routeInput = snapshotJson(
+    request.routeInput,
+    { nodes: 0, stringCodeUnits: 0 },
+    new Set(),
+  );
+  if (routeInput === INVALID_JSON_SNAPSHOT) return null;
+  return deepFreeze({
+    source: request.source,
+    locale: request.locale,
+    scope: {
+      tenant: scope.tenant,
+      authorization: scope.authorization,
+    },
+    scopeEpoch: request.scopeEpoch,
+    route: {
+      id: route.id,
+      revisionDigest: route.revisionDigest as Sha256Digest,
+    },
+    routeInput,
+  });
+}
+
+function snapshotRecord(
+  value: unknown,
+  expectedKeys: readonly string[],
+): Record<string, unknown> | null {
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    isProxy(value)
+  ) {
+    return null;
+  }
+  let prototype: object | null;
+  let descriptors: PropertyDescriptorMap;
+  try {
+    prototype = Object.getPrototypeOf(value);
+    descriptors = Object.getOwnPropertyDescriptors(value);
+  } catch {
+    return null;
+  }
+  if (prototype !== Object.prototype && prototype !== null) return null;
+  const keys = Reflect.ownKeys(descriptors);
+  if (
+    keys.length !== expectedKeys.length ||
+    keys.some((key) => typeof key !== "string" || !expectedKeys.includes(key))
+  ) {
+    return null;
+  }
+  const result: Record<string, unknown> = Object.create(null);
+  for (const key of expectedKeys) {
+    const descriptor = descriptors[key];
+    if (
+      descriptor === undefined ||
+      descriptor.enumerable !== true ||
+      !("value" in descriptor)
+    ) {
+      return null;
+    }
+    result[key] = descriptor.value;
+  }
+  return result;
+}
+
+function snapshotDenseArray(
+  value: unknown,
+  maximumLength: number,
+): readonly unknown[] | null {
+  if (!Array.isArray(value) || isProxy(value)) return null;
+  let descriptors: Record<string, PropertyDescriptor>;
+  try {
+    descriptors = Object.getOwnPropertyDescriptors(value);
+  } catch {
+    return null;
+  }
+  const lengthDescriptor = descriptors.length;
+  if (
+    lengthDescriptor === undefined ||
+    !("value" in lengthDescriptor) ||
+    !Number.isSafeInteger(lengthDescriptor.value) ||
+    lengthDescriptor.value < 0 ||
+    lengthDescriptor.value > maximumLength
+  ) {
+    return null;
+  }
+  const length = lengthDescriptor.value as number;
+  if (Reflect.ownKeys(descriptors).length !== length + 1) return null;
+  const result: unknown[] = [];
+  for (let index = 0; index < length; index += 1) {
+    const descriptor = descriptors[String(index)];
+    if (
+      descriptor === undefined ||
+      descriptor.enumerable !== true ||
+      !("value" in descriptor)
+    ) {
+      return null;
+    }
+    result.push(descriptor.value);
+  }
+  return result;
+}
+
+function snapshotJson(
+  value: unknown,
+  budget: { nodes: number; stringCodeUnits: number },
+  ancestors: Set<object>,
+): unknown | typeof INVALID_JSON_SNAPSHOT {
+  budget.nodes += 1;
+  if (budget.nodes > MAX_ROUTE_INPUT_NODES) return INVALID_JSON_SNAPSHOT;
+  if (value === null || typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : INVALID_JSON_SNAPSHOT;
+  }
+  if (typeof value === "string") {
+    budget.stringCodeUnits += value.length;
+    return budget.stringCodeUnits <= MAX_ROUTE_INPUT_STRING_CODE_UNITS
+      ? value
+      : INVALID_JSON_SNAPSHOT;
+  }
+  if (typeof value !== "object" || isProxy(value) || ancestors.has(value)) {
+    return INVALID_JSON_SNAPSHOT;
+  }
+  ancestors.add(value);
+  if (Array.isArray(value)) {
+    const entries = snapshotDenseArray(value, MAX_ROUTE_INPUT_NODES);
+    if (entries === null) {
+      ancestors.delete(value);
+      return INVALID_JSON_SNAPSHOT;
+    }
+    const result: unknown[] = [];
+    for (const entry of entries) {
+      const snapshot = snapshotJson(entry, budget, ancestors);
+      if (snapshot === INVALID_JSON_SNAPSHOT) {
+        ancestors.delete(value);
+        return INVALID_JSON_SNAPSHOT;
       }
-      seen.add(item.caseRef);
-      return deepFreeze({
-        caseRef: item.caseRef,
-        rawKey: item.rawKey,
-        expectedValueDigest: item.expectedValueDigest,
-        request: {
-          source: item.request.source,
-          locale: item.request.locale,
-          scope: {
-            tenant: item.request.scope.tenant,
-            authorization: item.request.scope.authorization,
-          },
-          scopeEpoch: item.request.scopeEpoch,
-          route: {
-            id: item.request.route.id,
-            revisionDigest: item.request.route.revisionDigest,
-          },
-          routeInput: structuredClone(item.request.routeInput),
-        },
-        usage: {
-          modelInputTokens: item.usage.modelInputTokens,
-          modelOutputTokens: item.usage.modelOutputTokens,
-          normalizationInputTokens: item.usage.normalizationInputTokens,
-          normalizationOutputTokens: item.usage.normalizationOutputTokens,
-        },
-      });
-    }),
-  );
-}
+      result.push(snapshot);
+    }
+    ancestors.delete(value);
+    return result;
+  }
 
-function validUsage(value: CacheImpactUsage): boolean {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    [
-      value.modelInputTokens,
-      value.modelOutputTokens,
-      value.normalizationInputTokens,
-      value.normalizationOutputTokens,
-    ].every((item) => Number.isSafeInteger(item) && item >= 0)
-  );
-}
-
-function validRequest(value: Omit<IntentInspectionRequest, "signal">): boolean {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    typeof value.source === "string" &&
-    value.source.length > 0 &&
-    value.source.length <= 16_384 &&
-    typeof value.locale === "string" &&
-    /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,4}$/u.test(value.locale) &&
-    typeof value.scopeEpoch === "string" &&
-    /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u.test(value.scopeEpoch) &&
-    value.scope !== null &&
-    typeof value.scope === "object" &&
-    typeof value.scope.tenant === "string" &&
-    value.scope.tenant.length > 0 &&
-    typeof value.scope.authorization === "string" &&
-    value.scope.authorization.length > 0 &&
-    value.route !== null &&
-    typeof value.route === "object" &&
-    /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u.test(value.route.id) &&
-    SHA_PATTERN.test(value.route.revisionDigest)
-  );
+  let prototype: object | null;
+  let descriptors: PropertyDescriptorMap;
+  try {
+    prototype = Object.getPrototypeOf(value);
+    descriptors = Object.getOwnPropertyDescriptors(value);
+  } catch {
+    ancestors.delete(value);
+    return INVALID_JSON_SNAPSHOT;
+  }
+  if (prototype !== Object.prototype && prototype !== null) {
+    ancestors.delete(value);
+    return INVALID_JSON_SNAPSHOT;
+  }
+  const keys = Reflect.ownKeys(descriptors);
+  if (keys.some((key) => typeof key !== "string")) {
+    ancestors.delete(value);
+    return INVALID_JSON_SNAPSHOT;
+  }
+  const result: Record<string, unknown> = Object.create(null);
+  for (const key of keys as string[]) {
+    budget.stringCodeUnits += key.length;
+    const descriptor = descriptors[key];
+    if (
+      budget.stringCodeUnits > MAX_ROUTE_INPUT_STRING_CODE_UNITS ||
+      descriptor === undefined ||
+      descriptor.enumerable !== true ||
+      !("value" in descriptor)
+    ) {
+      ancestors.delete(value);
+      return INVALID_JSON_SNAPSHOT;
+    }
+    const snapshot = snapshotJson(descriptor.value, budget, ancestors);
+    if (snapshot === INVALID_JSON_SNAPSHOT) {
+      ancestors.delete(value);
+      return INVALID_JSON_SNAPSHOT;
+    }
+    result[key] = snapshot;
+  }
+  ancestors.delete(value);
+  return result;
 }
 
 function deepFreeze<T>(value: T): T {

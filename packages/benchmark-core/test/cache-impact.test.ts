@@ -183,4 +183,72 @@ describe("cache impact study", () => {
       }),
     ).rejects.toThrow(/authenticator/u);
   });
+
+  it("snapshots trusted case data without invoking hostile accessors", async () => {
+    let getterCalls = 0;
+    const hostileUsage = {
+      get modelInputTokens() {
+        getterCalls += 1;
+        return 100;
+      },
+      modelOutputTokens: 20,
+      normalizationInputTokens: 0,
+      normalizationOutputTokens: 0,
+    };
+    const hostileRouteInput = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(hostileRouteInput, "command", {
+      enumerable: true,
+      get: () => {
+        getterCalls += 1;
+        return "status";
+      },
+    });
+
+    await expect(
+      run([
+        {
+          ...cacheCase(0, "hostile usage"),
+          usage: hostileUsage as never,
+        },
+      ]),
+    ).rejects.toThrow(/case set/u);
+    await expect(
+      run([
+        {
+          ...cacheCase(0, "hostile route input"),
+          request: {
+            ...cacheCase(0, "hostile route input").request,
+            routeInput: hostileRouteInput,
+          },
+        },
+      ]),
+    ).rejects.toThrow(/case set/u);
+    expect(getterCalls).toBe(0);
+  });
+
+  it("rejects an accessor-backed inspector result without reading reasons", async () => {
+    let getterCalls = 0;
+    const reasons: string[] = [];
+    Object.defineProperty(reasons, "0", {
+      enumerable: true,
+      configurable: true,
+      get: () => {
+        getterCalls += 1;
+        return "INTENT_NORMALIZED";
+      },
+    });
+    reasons.length = 1;
+    const report = await run([cacheCase(0, "hostile result")], {
+      inspect: async () =>
+        ({
+          status: "eligible",
+          intentKey: shadowHmac("shadow-intent", "a"),
+          reasons,
+        }) as never,
+    });
+
+    expect(getterCalls).toBe(0);
+    expect(report.cases[0]?.normalization).toBe("inspector-failed");
+    expect(report.summary.gate.reasons).toContain("INSPECTION_FAILURES");
+  });
 });
