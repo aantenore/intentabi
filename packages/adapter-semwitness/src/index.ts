@@ -17,6 +17,10 @@ import {
   hmacScopeDigest,
   normalizeIntentShadow,
 } from "semwitness/intent";
+import {
+  parseIntentCachePromotionEvidenceFixture,
+  parseIntentCachePromotionEvidenceJsonl,
+} from "semwitness/intent/host";
 
 export interface SemWitnessInspectorOptions {
   readonly registrySource: string;
@@ -28,6 +32,31 @@ export interface SemWitnessInspectorOptions {
   };
   /** Trusted operation-id to exact application-route input bindings. */
   readonly routeBindings: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * Validate and deterministically serialize a complete, host-attested
+ * SemWitness intent-cache promotion fixture.
+ *
+ * IntentABI shadow envelopes intentionally do not contain the normalization
+ * witnesses, oracle facts, paired usage accounting, or cohort bindings that
+ * SemWitness requires for qualification. This exporter therefore never
+ * derives promotion evidence from an IntentABI envelope. The host must supply
+ * the complete SemWitness fixture; SemWitness owns both validation and the
+ * evaluator that consumes the returned JSONL.
+ */
+export function exportIntentCachePromotionEvidenceJsonl(
+  source: unknown,
+): string {
+  const fixture = parseIntentCachePromotionEvidenceFixture(source);
+  const jsonl = `${[fixture.binding, ...fixture.cases]
+    .map((record) => JSON.stringify(record))
+    .join("\n")}\n`;
+
+  // Re-parse the actual bytes so size/JSONL constraints cannot diverge from
+  // the in-memory fixture parser. No IntentABI-owned fallback is permitted.
+  parseIntentCachePromotionEvidenceJsonl(jsonl);
+  return jsonl;
 }
 
 /**

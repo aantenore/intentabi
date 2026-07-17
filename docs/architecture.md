@@ -88,6 +88,18 @@ scope bindings, invokes `normalizeIntentShadow`, verifies the trusted route
 binding, and exports only domain-separated HMAC keys. Its `intentKey` is a
 shadow correlation key, **not** SemWitness's future cache-admission key.
 
+The same adapter exposes the narrow
+`exportIntentCachePromotionEvidenceJsonl` conformance exporter. It accepts only
+a complete host-attested fixture for the public `semwitness/intent/host`
+contract, validates it with SemWitness, serializes the parser-normalized records
+as deterministic JSONL, and reparses the emitted bytes before returning them.
+It does not convert an IntentABI shadow envelope: that envelope deliberately
+lacks normalization/cache witnesses, held-out oracles, paired usage accounting,
+and cohort bindings. Those facts must come from the host that observed them,
+and only the SemWitness evaluator can return a qualification result. A valid
+but underfilled corpus therefore remains a well-formed `qualified: false`
+result rather than invented evidence.
+
 ### Agentic SDLC
 
 - `FixtureAgenticSdlcRoute` is deterministic and used for conformance.

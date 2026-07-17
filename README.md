@@ -120,7 +120,7 @@ checkout, set `AGENTIC_SDLC_ENTRYPOINT`, `AGENTIC_SDLC_ROOT`, and a host-derived
 
 ```text
 packages/core                 provider-agnostic runtime and ports
-packages/adapter-semwitness   semantic authority and route-binding adapter
+packages/adapter-semwitness   semantic authority, route binding, promotion export
 packages/adapter-agentic-sdlc typed fixture and trusted CLI routes
 packages/codex-host             SemWitness-preparer/Codex transport host
 packages/adapter-codex-sdk      pinned Thread factory and passthrough adapter

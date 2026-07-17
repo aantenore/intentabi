@@ -46,6 +46,9 @@ or an installable npm release. Those require held-out and operational evidence.
       SDK `0.144.4` types.
 - [x] Codex evidence uses scope-bound HMACs, strict detached verification, and
       an atomic replay-guard port; no envelope is emitted without a binding.
+- [x] Complete host-attested intent-cache evidence can be exported as
+      deterministic SemWitness JSONL; closed schemas reject candidate payloads,
+      and underfilled corpora remain unqualified under the real evaluator.
 
 ## Promotion Gates
 
