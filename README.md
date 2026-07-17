@@ -34,6 +34,8 @@ replays an ordered private workload through the existing SemWitness adapter,
 compares exact-request keys with normalized intent keys, checks every candidate
 hit against a host-supplied value digest, and reports safe-hit lift plus net
 input/output token deltas. It remains offline, content-free, and shadow-only.
+The report binds the exact registry bytes and inspector configuration, while
+labeling workload, usage, and freshness provenance as unattested diagnostics.
 
 ## Why This Exists
 

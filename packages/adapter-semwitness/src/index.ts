@@ -35,6 +35,15 @@ import {
 
 export * from "./qualification.js";
 
+/**
+ * Exact normalization authority pinned by this source release. Cache-impact
+ * provenance binds this identifier together with the complete registry bytes
+ * and inspector configuration so a changed authority cannot reuse a dataset
+ * binding silently.
+ */
+export const SEMWITNESS_INTENT_INSPECTOR_IMPLEMENTATION =
+  "io.github.aantenore.intentabi/semwitness-intent-inspector/v1+semwitness-de1e30509fdcf92f021dc0db06f3fa6ad1d48c80" as const;
+
 export interface SemWitnessInspectorOptions {
   readonly registrySource: string;
   readonly policyDigest: Sha256Digest;

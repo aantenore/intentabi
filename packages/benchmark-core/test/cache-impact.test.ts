@@ -64,6 +64,7 @@ function run(
     inspector,
     keyId: "cache-impact-v1",
     datasetDigest: hmac("d"),
+    normalizationBindingDigest: hmac("e"),
     inspectionTimeoutMs: 50,
     authenticateReport: () => hmac("f"),
   });
@@ -104,6 +105,12 @@ describe("cache impact study", () => {
       mode: "shadow",
       activationAuthorized: false,
       promotionManifest: "not-produced",
+      normalizationBindingDigest: hmac("e"),
+      measurementProvenance: {
+        workload: "host-supplied-unattested",
+        usage: "host-declared-unverified",
+        freshness: "not-modeled",
+      },
       reportMac: hmac("f"),
     });
     const serialized = JSON.stringify(report);
@@ -178,6 +185,7 @@ describe("cache impact study", () => {
         inspector: eligibleInspector(),
         keyId: "cache-impact-v1",
         datasetDigest: hmac("d"),
+        normalizationBindingDigest: hmac("e"),
         inspectionTimeoutMs: 50,
         authenticateReport: () => "invalid" as never,
       }),

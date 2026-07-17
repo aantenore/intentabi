@@ -80,7 +80,14 @@ export interface UnsignedCacheImpactReport {
   readonly promotionManifest: "not-produced";
   readonly keyId: string;
   readonly datasetDigest: HmacEvidenceDigest;
+  /** Keyed binding of the registry, adapter, policy, scope, and route map. */
+  readonly normalizationBindingDigest: HmacEvidenceDigest;
   readonly inspectionTimeoutMs: number;
+  readonly measurementProvenance: Readonly<{
+    readonly workload: "host-supplied-unattested";
+    readonly usage: "host-declared-unverified";
+    readonly freshness: "not-modeled";
+  }>;
   readonly cases: readonly CacheImpactCaseResult[];
   readonly summary: Readonly<{
     requests: number;
@@ -128,6 +135,7 @@ export async function runCacheImpactStudy(input: {
   readonly inspector: IntentInspector;
   readonly keyId: string;
   readonly datasetDigest: HmacEvidenceDigest;
+  readonly normalizationBindingDigest: HmacEvidenceDigest;
   readonly inspectionTimeoutMs: number;
   readonly authenticateReport: (
     report: UnsignedCacheImpactReport,
@@ -141,6 +149,8 @@ export async function runCacheImpactStudy(input: {
     !KEY_ID_PATTERN.test(input.keyId) ||
     typeof input.datasetDigest !== "string" ||
     !HMAC_PATTERN.test(input.datasetDigest) ||
+    typeof input.normalizationBindingDigest !== "string" ||
+    !HMAC_PATTERN.test(input.normalizationBindingDigest) ||
     !Number.isSafeInteger(input.inspectionTimeoutMs) ||
     input.inspectionTimeoutMs < 1 ||
     input.inspectionTimeoutMs > 30_000 ||
@@ -257,7 +267,13 @@ export async function runCacheImpactStudy(input: {
     promotionManifest: "not-produced",
     keyId: input.keyId,
     datasetDigest: input.datasetDigest,
+    normalizationBindingDigest: input.normalizationBindingDigest,
     inspectionTimeoutMs: input.inspectionTimeoutMs,
+    measurementProvenance: {
+      workload: "host-supplied-unattested",
+      usage: "host-declared-unverified",
+      freshness: "not-modeled",
+    },
     cases: results,
     summary: {
       requests: results.length,

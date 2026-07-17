@@ -5,6 +5,13 @@ source-alpha and follows semantic-versioned prereleases.
 
 ## Unreleased
 
+### Fixed
+
+- Bound cache-impact dataset identity to the exact normalization registry,
+  pinned adapter, policy, scope, and route configuration.
+- Made unattested workload, usage-counter, and freshness provenance explicit in
+  every cache-impact report.
+
 ## 0.2.0-alpha.1 - 2026-07-17
 
 ### Added

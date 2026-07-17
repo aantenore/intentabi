@@ -7,6 +7,7 @@ import {
 } from "semwitness/intent/host";
 
 import {
+  SEMWITNESS_INTENT_INSPECTOR_IMPLEMENTATION,
   SemWitnessIntentInspector,
   exportIntentCachePromotionEvidenceJsonl,
 } from "../src/index.js";
@@ -46,6 +47,20 @@ function inspectionRequest(source: string) {
 }
 
 describe("SemWitnessIntentInspector", () => {
+  it("keeps the public implementation binding aligned with the pinned dependency", () => {
+    const manifest = JSON.parse(
+      readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+    );
+    const dependency = String(manifest.dependencies?.semwitness ?? "");
+    const revision = /#([a-f0-9]{40})$/u.exec(dependency)?.[1];
+
+    expect(revision).toBeDefined();
+    if (revision === undefined) throw new Error("dependency revision missing");
+    expect(SEMWITNESS_INTENT_INSPECTOR_IMPLEMENTATION.endsWith(revision)).toBe(
+      true,
+    );
+  });
+
   it("converges configured paraphrases through SemWitness-owned IntentIR", async () => {
     const first = await inspector.inspect(
       inspectionRequest("Show the current Agentic SDLC project status."),

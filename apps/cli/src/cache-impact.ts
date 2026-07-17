@@ -1,7 +1,11 @@
 import { dirname, resolve } from "node:path";
 
-import { SemWitnessIntentInspector } from "@intentabi/adapter-semwitness";
 import {
+  SEMWITNESS_INTENT_INSPECTOR_IMPLEMENTATION,
+  SemWitnessIntentInspector,
+} from "@intentabi/adapter-semwitness";
+import {
+  CACHE_IMPACT_IMPLEMENTATION,
   runCacheImpactStudy,
   type CacheImpactCase,
 } from "@intentabi/benchmark-core";
@@ -109,9 +113,22 @@ export async function runCacheImpactCli(
       routeBindings: config.semwitness.routeBindings,
     });
     const digester = createHmacOpaqueDigester(secret, config.study.keyId);
+    const normalizationBindingDigest = digester.digestJson({
+      schema:
+        "io.github.aantenore.intentabi/cache-impact-normalization-binding/v1",
+      implementation: SEMWITNESS_INTENT_INSPECTOR_IMPLEMENTATION,
+      registrySource,
+      policyDigest: config.semwitness.policyDigest,
+      expectedScope: config.semwitness.expectedScope,
+      scopeEpoch: config.semwitness.scopeEpoch,
+      routeBindings: config.semwitness.routeBindings,
+    });
     const datasetDigest = digester.digestJson({
-      schema: "io.github.aantenore.intentabi/cache-impact-dataset-binding/v1",
+      schema: "io.github.aantenore.intentabi/cache-impact-dataset-binding/v2",
+      implementation: CACHE_IMPACT_IMPLEMENTATION,
+      normalizationBindingDigest,
       workload,
+      inspectionTimeoutMs: config.study.inspectionTimeoutMs,
       policyDigest: config.semwitness.policyDigest,
       scope: config.semwitness.expectedScope,
       scopeEpoch: config.semwitness.scopeEpoch,
@@ -154,6 +171,7 @@ export async function runCacheImpactCli(
       inspector,
       keyId: config.study.keyId,
       datasetDigest,
+      normalizationBindingDigest,
       inspectionTimeoutMs: config.study.inspectionTimeoutMs,
       authenticateReport: (unsigned) =>
         digester.digestJson({

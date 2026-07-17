@@ -23,6 +23,13 @@ never emits a cache-admission credential. Every report fixes:
 - `promotionManifest: "not-produced"`;
 - `statisticalReadiness.ready: false`.
 
+It also carries a keyed `normalizationBindingDigest` over the pinned adapter
+implementation, exact registry bytes, policy, scope epoch, expected scope, and
+route bindings. The dataset digest binds that normalization authority and the
+cache-impact implementation in addition to the ordered workload and study
+configuration. A registry or route-map change therefore cannot retain the same
+dataset identity.
+
 ## Architecture
 
 ```mermaid
@@ -96,6 +103,12 @@ Positive delta means fewer observed tokens under the normalized shadow
 strategy. It does not infer currency, latency, provider cache discounts, or
 future traffic distribution.
 
+The report keeps those limits machine-readable:
+`measurementProvenance.workload` is `host-supplied-unattested`, usage is
+`host-declared-unverified`, and freshness is `not-modeled`. The HMAC proves that
+the configured host emitted the report; it does not turn those declarations
+into provider receipts, a held-out sampling attestation, or a freshness oracle.
+
 The diagnostic gate fails on any raw or normalized unsafe hit, inspection
 failure/timeout, lack of safe-hit lift, or non-positive net token delta. The
 gate is intentionally stricter than printing an attractive cache-hit number,
@@ -149,6 +162,8 @@ here.
 
 - deterministic replay of the same parsed workload yields the same report body
   and HMAC under the same key;
+- changing registry bytes or inspector route bindings changes both the
+  normalization binding and dataset digest;
 - configured paraphrases create more safe normalized hits than raw hits in the
   bundled fixture;
 - distinct value digests on one normalized key fail the safety gate;

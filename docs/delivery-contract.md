@@ -130,6 +130,10 @@ value loop without weakening the active-cache prohibition.
 - [x] Bypass and inspection faults fall back to exact keys; calls are bounded.
 - [x] Emits an HMAC-authenticated content-free report with activation forbidden
       and statistical readiness false.
+- [x] Binds exact registry bytes, the pinned adapter implementation, policy,
+      scope, and route map into report provenance and the dataset digest.
+- [x] Labels host-supplied workload, unverified token counters, and unmodeled
+      freshness directly in the report instead of implying external attestation.
 - [x] Exit `0` requires zero unsafe hits/failures, positive safe-hit lift, and a
       positive net token delta; exit `2` preserves valid negative evidence.
 - [x] CLI inputs use shared bounded, stable, non-symlink file reads and closed
