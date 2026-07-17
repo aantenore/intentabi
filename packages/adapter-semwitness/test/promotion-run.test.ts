@@ -16,9 +16,10 @@ describe("host-attested SemWitness promotion run", () => {
     expect(first.workbench).toEqual(reordered.workbench);
     expect(first.evidenceJsonl.endsWith("\n")).toBe(true);
     expect(first.evidenceJsonl.endsWith("\n\n")).toBe(false);
-    expect(parseIntentCachePromotionEvidenceJsonl(first.evidenceJsonl)).toEqual(
-      first.fixture,
-    );
+    expect(
+      parseIntentCachePromotionEvidenceJsonl(first.evidenceJsonl).cases,
+    ).toEqual([]);
+    expect(Object.keys(first).sort()).toEqual(["evidenceJsonl", "workbench"]);
     expect(first.workbench.qualified).toBe(false);
     expect(first.workbench.report.gateReasons).toContain(
       "INSUFFICIENT_OPERATION_HITS",
@@ -29,17 +30,19 @@ describe("host-attested SemWitness promotion run", () => {
   it("returns detached frozen evidence without creating payload fields", () => {
     const input = createEmptyPromotionAssemblyInput();
     const result = evaluateHostAttestedPromotionRun(input);
-    const originalBindingDigest = result.fixture.binding.bindingDigest;
+    const originalEvidenceJsonl = result.evidenceJsonl;
+    const originalReportDigest = result.workbench.reportDigest;
 
     const mutable = input.attestation.population as {
       attempted: number;
     };
     mutable.attempted = 99;
 
-    expect(result.fixture.binding.bindingDigest).toBe(originalBindingDigest);
+    expect(result.evidenceJsonl).toBe(originalEvidenceJsonl);
+    expect(result.workbench.reportDigest).toBe(originalReportDigest);
     expect(Object.isFrozen(result)).toBe(true);
-    expect(Object.isFrozen(result.fixture)).toBe(true);
-    expect(Object.isFrozen(result.fixture.binding)).toBe(true);
+    expect(Object.isFrozen(result.workbench)).toBe(true);
+    expect(Object.isFrozen(result.workbench.report)).toBe(true);
     expect(result.evidenceJsonl).not.toMatch(
       /(?:candidate|provider|network|store|cache)Payload/u,
     );
@@ -87,6 +90,23 @@ describe("host-attested SemWitness promotion run", () => {
         }),
       ).toThrow();
     }
+
+    const nested = createEmptyPromotionAssemblyInput();
+    expect(() =>
+      evaluateHostAttestedPromotionRun({
+        ...nested,
+        attestation: {
+          ...nested.attestation,
+          dependencies: {
+            ...nested.attestation.dependencies,
+            provider: {
+              ...nested.attestation.dependencies.provider,
+              providerPayload: "PRIVATE_PROVIDER_PAYLOAD_MUST_NOT_LEAVE_HOST",
+            },
+          },
+        } as typeof nested.attestation,
+      }),
+    ).toThrow();
   });
 });
 

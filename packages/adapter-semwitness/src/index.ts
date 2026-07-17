@@ -22,7 +22,7 @@ import {
   evaluateIntentCachePromotionEvidence,
   parseIntentCachePromotionEvidenceFixture,
   parseIntentCachePromotionEvidenceJsonl,
-  type IntentCachePromotionEvidenceAttestation,
+  type IntentCachePromotionEvidenceAssemblyInput,
   type IntentCachePromotionEvidenceFixture,
   type IntentCachePromotionWorkbenchResult,
 } from "semwitness/intent/host";
@@ -54,9 +54,7 @@ export function exportIntentCachePromotionEvidenceJsonl(
   source: unknown,
 ): string {
   const fixture = parseIntentCachePromotionEvidenceFixture(source);
-  const jsonl = `${[fixture.binding, ...fixture.cases]
-    .map((record) => JSON.stringify(record))
-    .join("\n")}\n`;
+  const jsonl = serializeParsedPromotionEvidence(fixture);
 
   // Re-parse the actual bytes so size/JSONL constraints cannot diverge from
   // the in-memory fixture parser. No IntentABI-owned fallback is permitted.
@@ -68,14 +66,11 @@ export function exportIntentCachePromotionEvidenceJsonl(
  * Deployment facts and already-sealed case records observed by the host.
  * SemWitness owns their schema, validation, aggregation, and qualification.
  */
-export interface HostAttestedPromotionRunInput {
-  readonly attestation: IntentCachePromotionEvidenceAttestation;
-  readonly cases: readonly unknown[];
-}
+export type HostAttestedPromotionRunInput =
+  IntentCachePromotionEvidenceAssemblyInput;
 
 /** A content-free evidence artifact and the authoritative SemWitness result. */
 export interface HostAttestedPromotionRunResult {
-  readonly fixture: IntentCachePromotionEvidenceFixture;
   readonly evidenceJsonl: string;
   readonly workbench: IntentCachePromotionWorkbenchResult;
 }
@@ -84,19 +79,27 @@ export interface HostAttestedPromotionRunResult {
  * Run the narrow host-to-SemWitness promotion pipeline.
  *
  * IntentABI performs no repair, aggregation, or qualification. SemWitness
- * assembles the host-attested records, the existing exporter emits canonical
- * JSONL, the exact bytes are parsed again, and the SemWitness evaluator makes
+ * assembles the host-attested records, the shared serializer emits deterministic
+ * JSONL, and the SemWitness evaluator parses those exact bytes before making
  * the final fail-closed decision. An unqualified result is valid evidence.
  */
 export function evaluateHostAttestedPromotionRun(
   input: HostAttestedPromotionRunInput,
 ): HostAttestedPromotionRunResult {
   const assembled = assembleIntentCachePromotionEvidence(input);
-  const evidenceJsonl = exportIntentCachePromotionEvidenceJsonl(assembled);
-  const fixture = parseIntentCachePromotionEvidenceJsonl(evidenceJsonl);
-  const workbench = evaluateIntentCachePromotionEvidence(fixture);
+  const evidenceJsonl = serializeParsedPromotionEvidence(assembled);
+  const workbench = evaluateIntentCachePromotionEvidence(evidenceJsonl);
 
-  return Object.freeze({ fixture, evidenceJsonl, workbench });
+  return Object.freeze({ evidenceJsonl, workbench });
+}
+
+/** Serialize only a detached fixture already accepted by SemWitness. */
+function serializeParsedPromotionEvidence(
+  fixture: IntentCachePromotionEvidenceFixture,
+): string {
+  return `${[fixture.binding, ...fixture.cases]
+    .map((record) => JSON.stringify(record))
+    .join("\n")}\n`;
 }
 
 /**
