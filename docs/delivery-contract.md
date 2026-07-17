@@ -93,3 +93,11 @@ real local Agentic SDLC route smoke.
 Package publication is a separate gate: SemWitness needs an immutable registry
 artifact, every package must build during pack, and clean consumers must install,
 import exports, and run the CLI without Git/SSH-specific configuration.
+
+## Qualification Lab Increment
+
+The next delivery increment is specified in
+[Qualification Lab](qualification-lab.md). It adds bounded provider-neutral
+paired execution and evidence orchestration while preserving SemWitness as the
+sole qualification authority. Its conformance result remains diagnostic and
+cannot relax any active-cache or transformed-Codex promotion gate above.

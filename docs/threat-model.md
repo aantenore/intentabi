@@ -49,6 +49,10 @@ principal and authorization state from its authenticated context.
 | Benchmark transport bypass        | custom no-WebSocket/no-retry provider; fail-closed static URL; public canary; exact one-request loopback gateway       | system/MDM hooks and legacy notifications still require a dedicated clean host         |
 | Benchmark content persistence     | fresh private runtime, normal cleanup, dead-lease startup scavenger, content-free receipts                             | abrupt termination leaves raw sessions until the next cleanup or manual removal        |
 | Benchmark receipt mutation        | domain-separated HMAC over the complete canonical receipt body with explicit key lineage                               | local verifier still depends on secure key custody and trusted host code               |
+| Qualification selective dropping  | contiguous ordinals and one sealed record for every attempted case                                                     | a malicious case source can bias the population before admission                       |
+| Qualification order bias          | AB/BA balance per declared stratum and fresh execution scope per arm                                                   | provider-side caches outside the host may remain shared                                |
+| Qualification oracle laundering   | versioned deterministic oracle; incomplete or failed oracle is a negative record                                       | a wrong trusted oracle can still certify the wrong task property                       |
+| Qualification payload leakage     | opaque core values, content-free result schemas, privacy canaries, bounded constant errors                             | trusted case, execution, oracle, and evidence adapters necessarily see private content |
 
 ## Key Handling
 

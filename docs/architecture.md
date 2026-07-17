@@ -189,3 +189,17 @@ The core ports replace the route, inspector, nomination index, HMAC provider,
 and evidence sink. Provider/model selection stays outside core. Any probabilistic
 compiler remains non-authoritative behind SemWitness; any future active cache
 must consume SemWitness's complete scope/dependency-aware admission contract.
+
+## Qualification Lab
+
+The [Qualification Lab](qualification-lab.md) is a separate application and
+package boundary. It reuses neither `ShadowRuntime` nor the Codex benchmark's
+content-bearing dataset types. Its core sees opaque private cases, opaque arm
+artifacts, opaque usage observations, and opaque sealed records through generic
+ports. A SemWitness edge adapter owns the only dependency on
+`semwitness/intent/host` and forwards complete host-sealed records to the
+existing authoritative assembler and evaluator.
+
+This separation lets Agentic SDLC, Codex, a local model, or another application
+provide execution and oracle adapters without putting their schemas into the
+core or creating a second semantic authority.
