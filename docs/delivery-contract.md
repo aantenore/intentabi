@@ -17,7 +17,7 @@ or an installable npm release. Those require held-out and operational evidence.
 - [x] Core has no provider/application-specific composition schema.
 - [x] Strict, controlled-namespace, shadow-only host configuration.
 - [x] SemWitness consumed through public exports at immutable commit
-      `ea205667b53ded6fb18ce8fdfa477488a361a3f2`.
+      `01683a35a7305a5f30dc35077b722f5515bc209c`.
 - [x] Trusted operation-to-route-input binding; mismatches bypass measurement.
 - [x] Ordinary Agentic SDLC route always executes and solely determines output.
 - [x] Nomination store cannot return content; positive probes stay unverified;
@@ -51,7 +51,13 @@ or an installable npm release. Those require held-out and operational evidence.
       and underfilled corpora remain unqualified under the real evaluator.
 - [x] The host promotion facade composes SemWitness assembly, exact JSONL
       reparse, and SemWitness evaluation without deriving evidence or exposing
-      provider, network, store, cache, or candidate payloads.
+      provider, network, store, cache, or candidate payloads, and it no longer
+      retains a duplicate parsed fixture beside the exact JSONL bytes.
+
+> Alpha migration: `HostAttestedPromotionRunResult.fixture` was removed from
+> the private source-workspace adapter. Consumers should retain
+> `evidenceJsonl` only when they need the portable evidence artifact and use
+> `workbench` for the authoritative SemWitness result.
 
 ## Promotion Gates
 

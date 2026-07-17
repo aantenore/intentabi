@@ -100,14 +100,14 @@ and only the SemWitness evaluator can return a qualification result. A valid
 but underfilled corpus therefore remains a well-formed `qualified: false`
 result rather than invented evidence.
 
-`evaluateHostAttestedPromotionRun` composes that exporter with SemWitness's
-authoritative assembler and evaluator. Its boundary is deliberately small:
-the host supplies only deployment attestation plus already-sealed unknown case
-records. SemWitness validates and freezes them, supplies protocol literals,
-derives aggregate counters and corpus/binding digests, and decides
-qualification. IntentABI serializes the assembled fixture, reparses the exact
-JSONL bytes, and passes that reparsed object to the evaluator. It has no policy,
-repair, network, provider, store, cache, or candidate-content path.
+`evaluateHostAttestedPromotionRun` composes SemWitness's authoritative assembler
+and evaluator around the same deterministic serializer as the public exporter.
+Its boundary is deliberately small: the host supplies only deployment
+attestation plus already-sealed unknown case records. SemWitness validates and
+freezes them, supplies protocol literals, derives aggregate counters and
+corpus/binding digests, then parses the exact emitted JSONL bytes and decides
+qualification. IntentABI retains no duplicate fixture in the result and has no
+policy, repair, network, provider, store, cache, or candidate-content path.
 
 ### Agentic SDLC
 
