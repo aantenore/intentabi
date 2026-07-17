@@ -2,7 +2,7 @@
   "name": "@intentabi/cli",
   "version": "0.1.0-alpha.1",
   "private": true,
-  "description": "Source-only CLI for running IntentABI shadow qualification.",
+  "description": "Source-only CLI for IntentABI shadow execution and cache-impact diagnostics.",
   "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
   "homepage": "https://github.com/aantenore/intentabi#readme",
   "bugs": {
@@ -16,6 +16,7 @@
   "keywords": [
     "agentic-ai",
     "cli",
+    "cache-metrics",
     "intent-normalization",
     "semantic-cache",
     "typescript"

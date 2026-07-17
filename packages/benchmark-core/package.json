@@ -2,7 +2,7 @@
   "name": "@intentabi/benchmark-core",
   "version": "0.1.0-alpha.1",
   "private": true,
-  "description": "Provider-neutral paired benchmark contracts for research-only IntentABI conformance runs.",
+  "description": "Provider-neutral paired-run and cache-impact contracts for IntentABI research evidence.",
   "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
   "homepage": "https://github.com/aantenore/intentabi#readme",
   "bugs": {
@@ -16,6 +16,7 @@
   "keywords": [
     "agentic-ai",
     "benchmark",
+    "cache-metrics",
     "codex",
     "conformance",
     "llm-evaluation"

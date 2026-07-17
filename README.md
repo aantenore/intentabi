@@ -29,6 +29,12 @@ does not call a model, generate evidence, serve a cache hit, or authorize active
 reuse. A read-only Agentic SDLC adapter separately checks route, contract, and
 outcome stability in both AB and BA order without exposing task content.
 
+The cache-impact lab is the smaller feedback loop before qualification. It
+replays an ordered private workload through the existing SemWitness adapter,
+compares exact-request keys with normalized intent keys, checks every candidate
+hit against a host-supplied value digest, and reports safe-hit lift plus net
+input/output token deltas. It remains offline, content-free, and shadow-only.
+
 ## Why This Exists
 
 Semantic caching is valuable only after equivalence, scope, authorization,
@@ -56,10 +62,12 @@ This alpha proves a narrow contract:
   submitting the original input byte-for-byte to `Thread.run`;
 - evidence is emitted in an authenticated, content-free envelope.
 
-It does **not** prove broad paraphrase recall, token savings, cache safety,
-lower model latency, or safe prompt rewriting. The Codex path is deliberately
-passthrough-only until held-out task and provider-usage evidence passes the
-existing SemWitness gates.
+It does **not** prove broad paraphrase recall, production cache safety, general
+token savings, lower model latency, or safe prompt rewriting. The cache-impact
+lab can measure workload-specific hit and token deltas, but its report declares
+statistical readiness false. The Codex path is deliberately passthrough-only
+until held-out task and provider-usage evidence passes the existing SemWitness
+gates.
 
 ## Run the Source Alpha
 
@@ -108,6 +116,34 @@ For a reproducible read-only contract smoke against an installed Agentic SDLC
 checkout, set `AGENTIC_SDLC_ENTRYPOINT`, `AGENTIC_SDLC_ROOT`, and a host-derived
 `AGENTIC_SDLC_DEPLOYMENT_REVISION_DIGEST`, then run
 `pnpm smoke:agentic-sdlc`.
+
+## Run the Cache Impact Lab
+
+The bundled workload demonstrates the concrete hypothesis: exact cache keys
+miss differently worded requests, while SemWitness-normalized keys converge
+configured equivalent phrasings. Token counters are workload observations,
+not estimates produced by this tool.
+
+```bash
+INTENTABI_HMAC_SECRET="$(openssl rand -hex 32)" \
+  pnpm cache:impact \
+  --config config/cache-impact.example.json \
+  --workload fixtures/cache-impact-workload.json
+```
+
+PowerShell:
+
+```powershell
+$env:INTENTABI_HMAC_SECRET = -join ((1..64) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })
+pnpm cache:impact --config config/cache-impact.example.json --workload fixtures/cache-impact-workload.json
+```
+
+The example reports one safe raw hit versus three safe normalized hits and a
+63-token positive delta after normalization overhead. Exit `0` means the exact
+diagnostic workload had safe hit lift and positive net tokens; exit `2` means a
+complete report failed a safety or value gate; exit `1` means the boundary or
+execution failed. None of the three authorizes cache activation. See
+[Cache Impact Lab](docs/cache-impact-lab.md) for contracts and metric formulas.
 
 ## Run the Qualification Lab
 
@@ -162,6 +198,10 @@ content-free. See [Qualification Lab](docs/qualification-lab.md).
   preparer timeout, malformed evidence, and sink failure cannot replace it;
 - structured text/image SDK inputs bypass preparation and retain their exact
   object identity in the passthrough transport.
+- cache-impact raw keys bind source, locale, scope, epoch, route, revision, and
+  route input; normalized keys keep the SemWitness policy/ontology binding;
+- expected value digests stay private, unsafe hits never save tokens, and every
+  report explicitly forbids activation.
 
 ## Workspace
 
@@ -171,7 +211,7 @@ packages/adapter-semwitness      route binding and SemWitness promotion orchestr
 packages/adapter-agentic-sdlc    typed fixture and trusted CLI routes
 packages/codex-host              SemWitness-preparer/Codex transport host
 packages/adapter-codex-sdk       pinned Thread factory and passthrough adapter
-packages/benchmark-core          provider-neutral paired conformance runner
+packages/benchmark-core          paired runs and raw-vs-normalized impact metrics
 packages/qualification-core      provider-neutral plan/authority/receipt core
 packages/cli-io                  bounded reads and atomic private publication
 packages/store-memory            metadata-only development nomination store
@@ -189,17 +229,19 @@ Codex notifications cannot be neutralized absolutely from inside the process.
 Read [architecture](docs/architecture.md),
 [delivery contract](docs/delivery-contract.md),
 [threat model](docs/threat-model.md),
-[landscape](docs/landscape.md), and
+[landscape](docs/landscape.md),
+[cache-impact lab](docs/cache-impact-lab.md), and
 [Codex integration boundary](docs/codex-integration.md) before extending the
 alpha.
 
-## Non-goals for `v0.1`
+## Non-goals for this alpha
 
 No embeddings, vector database, active cache, response reuse, transformed
 Codex submission, transparent composer interception, production multi-tenant
-store, or npm release. The runtime and shadow path remain provider-free; the
-separate, double-opt-in Codex benchmark can call a network model provider only
-as a research-conformance diagnostic. The exact-alias fixture proves contracts;
-it is not a claim of universal natural-language equivalence.
+store, or npm release. The runtime and cache-impact core remain provider-free;
+the separate, double-opt-in Codex benchmark can call a network model provider
+only as a research-conformance diagnostic. The exact-alias fixture proves
+contracts and arithmetic; it is not a claim of universal natural-language
+equivalence.
 
 Apache-2.0.

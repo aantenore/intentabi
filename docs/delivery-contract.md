@@ -2,7 +2,7 @@
 
 ## Product Claim
 
-IntentABI `v0.1.0-alpha.1` demonstrates that a source-installed host can measure
+IntentABI demonstrates that a source-installed host can measure
 typed intent convergence beside an application route while cryptographically
 binding the normalized operation to the exact executed input, without creating
 an active cache or duplicating SemWitness.
@@ -115,3 +115,22 @@ relax any active-cache or transformed-Codex promotion gate above.
       returns HMAC-only route/contract/outcome observations.
 - [x] Shared CLI I/O rejects path substitution and publishes complete `0600`
       artifacts with no-clobber semantics.
+
+## Cache Impact Lab Increment
+
+The [Cache Impact Lab](cache-impact-lab.md) adds the missing workload-level
+value loop without weakening the active-cache prohibition.
+
+- [x] Reuses `SemWitnessIntentInspector`; no Intent IR or normalizer is copied.
+- [x] Compares HMAC exact-request keys with scope/route-bound intent keys.
+- [x] Uses a private host value digest to separate safe from unsafe candidate
+      hits and excludes unsafe hits from token savings.
+- [x] Accounts ordinary model input/output tokens and normalization overhead
+      separately with exact integer arithmetic.
+- [x] Bypass and inspection faults fall back to exact keys; calls are bounded.
+- [x] Emits an HMAC-authenticated content-free report with activation forbidden
+      and statistical readiness false.
+- [x] Exit `0` requires zero unsafe hits/failures, positive safe-hit lift, and a
+      positive net token delta; exit `2` preserves valid negative evidence.
+- [x] CLI inputs use shared bounded, stable, non-symlink file reads and closed
+      schemas.
