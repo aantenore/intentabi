@@ -6,6 +6,8 @@ import { isAbsolute } from "node:path";
 import type { OrdinaryRoute, Sha256Digest } from "@intentabi/core";
 import { z } from "zod";
 
+export * from "./qualification.js";
+
 const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
   z.union([
     z.null(),

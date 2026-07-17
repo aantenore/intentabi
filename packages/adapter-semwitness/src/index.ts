@@ -9,6 +9,7 @@ import type {
   IntentInspector,
   IntentInspectionRequest,
 } from "@intentabi/core";
+import type { QualificationAuthority } from "@intentabi/qualification-core";
 import type { Sha256Digest } from "semwitness";
 import {
   DeclarativeIntentNormalizer,
@@ -26,6 +27,13 @@ import {
   type IntentCachePromotionEvidenceFixture,
   type IntentCachePromotionWorkbenchResult,
 } from "semwitness/intent/host";
+
+import {
+  projectSemWitnessQualificationResult,
+  type SemWitnessQualificationAuthorityResult,
+} from "./qualification.js";
+
+export * from "./qualification.js";
 
 export interface SemWitnessInspectorOptions {
   readonly registrySource: string;
@@ -91,6 +99,41 @@ export function evaluateHostAttestedPromotionRun(
   const workbench = evaluateIntentCachePromotionEvidence(evidenceJsonl);
 
   return Object.freeze({ evidenceJsonl, workbench });
+}
+
+/**
+ * Qualification Lab authority adapter. It preserves the exact private
+ * SemWitness artifact separately and exposes only ordered, content-free case
+ * bindings to the provider-neutral orchestration core.
+ */
+export function evaluateSemWitnessQualification(
+  input: HostAttestedPromotionRunInput,
+): SemWitnessQualificationAuthorityResult {
+  return projectSemWitnessQualificationResult(
+    evaluateHostAttestedPromotionRun(input),
+  );
+}
+
+export type SemWitnessQualificationAuthority = QualificationAuthority<
+  HostAttestedPromotionRunInput["attestation"],
+  SemWitnessQualificationAuthorityResult["artifact"]
+>;
+
+/**
+ * Structural authority port for the provider-neutral Qualification Lab core.
+ * Records remain opaque until the SemWitness parser accepts or rejects them.
+ */
+export function createSemWitnessQualificationAuthority(): SemWitnessQualificationAuthority {
+  return Object.freeze({
+    evaluate: (input: {
+      readonly attestation: HostAttestedPromotionRunInput["attestation"];
+      readonly records: readonly unknown[];
+    }) =>
+      evaluateSemWitnessQualification({
+        attestation: input.attestation,
+        cases: input.records,
+      }),
+  });
 }
 
 /** Serialize only a detached fixture already accepted by SemWitness. */
