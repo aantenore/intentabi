@@ -1,6 +1,6 @@
 {
   "name": "@intentabi/cli",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0-alpha.2",
   "private": true,
   "description": "Source-only CLI for IntentABI shadow execution and cache-impact diagnostics.",
   "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",

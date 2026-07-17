@@ -1,6 +1,6 @@
 {
   "name": "intentabi-workspace",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0-alpha.2",
   "private": true,
   "description": "Shadow-only intent normalization, cache-impact, and SemWitness qualification runtime.",
   "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",

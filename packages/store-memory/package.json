@@ -1,6 +1,6 @@
 {
   "name": "@intentabi/store-memory",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0-alpha.2",
   "private": true,
   "description": "Source-only metadata store for IntentABI shadow observations.",
   "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",

@@ -5,6 +5,8 @@ source-alpha and follows semantic-versioned prereleases.
 
 ## Unreleased
 
+## 0.2.0-alpha.2 - 2026-07-17
+
 ### Fixed
 
 - Bound cache-impact dataset identity to the exact normalization registry,

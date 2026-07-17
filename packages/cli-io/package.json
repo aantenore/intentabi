@@ -1,6 +1,6 @@
 {
   "name": "@intentabi/cli-io",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0-alpha.2",
   "private": true,
   "description": "Bounded CLI input and atomic private artifact I/O for IntentABI compositions.",
   "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
