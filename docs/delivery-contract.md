@@ -17,7 +17,7 @@ or an installable npm release. Those require held-out and operational evidence.
 - [x] Core has no provider/application-specific composition schema.
 - [x] Strict, controlled-namespace, shadow-only host configuration.
 - [x] SemWitness consumed through public exports at immutable commit
-      `b9e368f34fa71300d1070e34a93d5b66be91dfed`.
+      `ea205667b53ded6fb18ce8fdfa477488a361a3f2`.
 - [x] Trusted operation-to-route-input binding; mismatches bypass measurement.
 - [x] Ordinary Agentic SDLC route always executes and solely determines output.
 - [x] Nomination store cannot return content; positive probes stay unverified;

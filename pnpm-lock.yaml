@@ -87,8 +87,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       semwitness:
-        specifier: github:aantenore/semwitness#b9e368f34fa71300d1070e34a93d5b66be91dfed
-        version: https://codeload.github.com/aantenore/semwitness/tar.gz/b9e368f34fa71300d1070e34a93d5b66be91dfed
+        specifier: github:aantenore/semwitness#ea205667b53ded6fb18ce8fdfa477488a361a3f2
+        version: https://codeload.github.com/aantenore/semwitness/tar.gz/ea205667b53ded6fb18ce8fdfa477488a361a3f2
 
   packages/benchmark-core: {}
 
@@ -98,8 +98,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       semwitness:
-        specifier: github:aantenore/semwitness#b9e368f34fa71300d1070e34a93d5b66be91dfed
-        version: https://codeload.github.com/aantenore/semwitness/tar.gz/b9e368f34fa71300d1070e34a93d5b66be91dfed
+        specifier: github:aantenore/semwitness#ea205667b53ded6fb18ce8fdfa477488a361a3f2
+        version: https://codeload.github.com/aantenore/semwitness/tar.gz/ea205667b53ded6fb18ce8fdfa477488a361a3f2
 
   packages/core:
     dependencies:
@@ -1332,12 +1332,12 @@ packages:
     engines: { node: ^20.19.0 || >=22.12.0 }
     hasBin: true
 
-  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/b9e368f34fa71300d1070e34a93d5b66be91dfed:
+  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/ea205667b53ded6fb18ce8fdfa477488a361a3f2:
     resolution:
       {
         gitHosted: true,
-        integrity: sha512-EAGp4mnpaghhQ40YDZxeduGFtVOx9uwhpVONRNdC/fUv7uuh7Wmyh8UH8ufaKcSYPMHG3C6KOFZKqnnxKl80iw==,
-        tarball: https://codeload.github.com/aantenore/semwitness/tar.gz/b9e368f34fa71300d1070e34a93d5b66be91dfed,
+        integrity: sha512-fXrNCOTU7Rew78FG78zAULhb6e9arTtVG5YBH3ipazVIdlLHaRH9Tv0PdpsH8kk/SrdIniGncSab7U/k23f+TA==,
+        tarball: https://codeload.github.com/aantenore/semwitness/tar.gz/ea205667b53ded6fb18ce8fdfa477488a361a3f2,
       }
     version: 0.5.0-alpha.3
     engines: { node: ">=24" }
@@ -2092,7 +2092,7 @@ snapshots:
       "@rolldown/binding-win32-arm64-msvc": 1.1.5
       "@rolldown/binding-win32-x64-msvc": 1.1.5
 
-  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/b9e368f34fa71300d1070e34a93d5b66be91dfed:
+  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/ea205667b53ded6fb18ce8fdfa477488a361a3f2:
     dependencies:
       "@ai-sdk/openai-compatible": 3.0.7(zod@4.4.3)
       "@ai-sdk/provider": 4.0.3
