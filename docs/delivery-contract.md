@@ -49,6 +49,9 @@ or an installable npm release. Those require held-out and operational evidence.
 - [x] Complete host-attested intent-cache evidence can be exported as
       deterministic SemWitness JSONL; closed schemas reject candidate payloads,
       and underfilled corpora remain unqualified under the real evaluator.
+- [x] The host promotion facade composes SemWitness assembly, exact JSONL
+      reparse, and SemWitness evaluation without deriving evidence or exposing
+      provider, network, store, cache, or candidate payloads.
 
 ## Promotion Gates
 

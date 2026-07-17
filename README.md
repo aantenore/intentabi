@@ -29,6 +29,14 @@ freshness, side effects, dependencies, and regressions have been measured.
 IntentABI creates evidence before an active cache exists, so a future reuse
 decision stays reversible and benchmark-driven rather than threshold-driven.
 
+For hosts that already captured complete, sealed SemWitness case records,
+`evaluateHostAttestedPromotionRun` provides one narrow application boundary:
+host attestation and unknown records enter; SemWitness assembles the binding,
+IntentABI emits deterministic JSONL, and SemWitness reparses and evaluates the
+exact artifact. The returned workbench may validly be `qualified: false`.
+IntentABI never fills missing witnesses, derives promotion counters, or carries
+candidate or infrastructure payloads through this API.
+
 This alpha proves a narrow contract:
 
 - exact configured aliases can converge through SemWitness;
@@ -120,7 +128,7 @@ checkout, set `AGENTIC_SDLC_ENTRYPOINT`, `AGENTIC_SDLC_ROOT`, and a host-derived
 
 ```text
 packages/core                 provider-agnostic runtime and ports
-packages/adapter-semwitness   semantic authority, route binding, promotion export
+packages/adapter-semwitness   route binding and SemWitness promotion orchestration
 packages/adapter-agentic-sdlc typed fixture and trusted CLI routes
 packages/codex-host             SemWitness-preparer/Codex transport host
 packages/adapter-codex-sdk      pinned Thread factory and passthrough adapter

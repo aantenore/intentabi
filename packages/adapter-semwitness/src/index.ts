@@ -18,8 +18,13 @@ import {
   normalizeIntentShadow,
 } from "semwitness/intent";
 import {
+  assembleIntentCachePromotionEvidence,
+  evaluateIntentCachePromotionEvidence,
   parseIntentCachePromotionEvidenceFixture,
   parseIntentCachePromotionEvidenceJsonl,
+  type IntentCachePromotionEvidenceAttestation,
+  type IntentCachePromotionEvidenceFixture,
+  type IntentCachePromotionWorkbenchResult,
 } from "semwitness/intent/host";
 
 export interface SemWitnessInspectorOptions {
@@ -57,6 +62,41 @@ export function exportIntentCachePromotionEvidenceJsonl(
   // the in-memory fixture parser. No IntentABI-owned fallback is permitted.
   parseIntentCachePromotionEvidenceJsonl(jsonl);
   return jsonl;
+}
+
+/**
+ * Deployment facts and already-sealed case records observed by the host.
+ * SemWitness owns their schema, validation, aggregation, and qualification.
+ */
+export interface HostAttestedPromotionRunInput {
+  readonly attestation: IntentCachePromotionEvidenceAttestation;
+  readonly cases: readonly unknown[];
+}
+
+/** A content-free evidence artifact and the authoritative SemWitness result. */
+export interface HostAttestedPromotionRunResult {
+  readonly fixture: IntentCachePromotionEvidenceFixture;
+  readonly evidenceJsonl: string;
+  readonly workbench: IntentCachePromotionWorkbenchResult;
+}
+
+/**
+ * Run the narrow host-to-SemWitness promotion pipeline.
+ *
+ * IntentABI performs no repair, aggregation, or qualification. SemWitness
+ * assembles the host-attested records, the existing exporter emits canonical
+ * JSONL, the exact bytes are parsed again, and the SemWitness evaluator makes
+ * the final fail-closed decision. An unqualified result is valid evidence.
+ */
+export function evaluateHostAttestedPromotionRun(
+  input: HostAttestedPromotionRunInput,
+): HostAttestedPromotionRunResult {
+  const assembled = assembleIntentCachePromotionEvidence(input);
+  const evidenceJsonl = exportIntentCachePromotionEvidenceJsonl(assembled);
+  const fixture = parseIntentCachePromotionEvidenceJsonl(evidenceJsonl);
+  const workbench = evaluateIntentCachePromotionEvidence(fixture);
+
+  return Object.freeze({ fixture, evidenceJsonl, workbench });
 }
 
 /**
