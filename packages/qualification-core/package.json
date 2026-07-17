@@ -1,8 +1,8 @@
 {
-  "name": "@intentabi/codex-bench",
+  "name": "@intentabi/qualification-core",
   "version": "0.1.0-alpha.1",
   "private": true,
-  "description": "Opt-in, research-only Codex SDK paired benchmark runner for IntentABI.",
+  "description": "Provider-neutral orchestration contracts for content-free shadow qualification evidence.",
   "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
   "homepage": "https://github.com/aantenore/intentabi#readme",
   "bugs": {
@@ -11,19 +11,17 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/aantenore/intentabi.git",
-    "directory": "apps/codex-bench"
+    "directory": "packages/qualification-core"
   },
   "keywords": [
-    "benchmark",
-    "codex",
-    "conformance",
-    "llm-evaluation"
+    "agentic-ai",
+    "evidence",
+    "intent-normalization",
+    "llm-evaluation",
+    "shadow-qualification"
   ],
   "type": "module",
   "license": "Apache-2.0",
-  "bin": {
-    "intentabi-codex-bench": "./dist/bin.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -41,13 +39,5 @@
     "prepack": "pnpm run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
-  },
-  "dependencies": {
-    "@intentabi/adapter-codex-sdk": "workspace:*",
-    "@intentabi/benchmark-core": "workspace:*",
-    "@intentabi/cli-io": "workspace:*",
-    "@intentabi/core": "workspace:*",
-    "@openai/codex-sdk": "0.144.4",
-    "zod": "4.4.3"
   }
 }

@@ -52,12 +52,33 @@ importers:
       "@intentabi/benchmark-core":
         specifier: workspace:*
         version: link:../../packages/benchmark-core
+      "@intentabi/cli-io":
+        specifier: workspace:*
+        version: link:../../packages/cli-io
       "@intentabi/core":
         specifier: workspace:*
         version: link:../../packages/core
       "@openai/codex-sdk":
         specifier: 0.144.4
         version: 0.144.4
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
+  apps/qualification:
+    dependencies:
+      "@intentabi/adapter-semwitness":
+        specifier: workspace:*
+        version: link:../../packages/adapter-semwitness
+      "@intentabi/cli-io":
+        specifier: workspace:*
+        version: link:../../packages/cli-io
+      "@intentabi/core":
+        specifier: workspace:*
+        version: link:../../packages/core
+      "@intentabi/qualification-core":
+        specifier: workspace:*
+        version: link:../../packages/qualification-core
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -86,11 +107,16 @@ importers:
       "@intentabi/core":
         specifier: workspace:*
         version: link:../core
+      "@intentabi/qualification-core":
+        specifier: workspace:*
+        version: link:../qualification-core
       semwitness:
-        specifier: github:aantenore/semwitness#01683a35a7305a5f30dc35077b722f5515bc209c
-        version: https://codeload.github.com/aantenore/semwitness/tar.gz/01683a35a7305a5f30dc35077b722f5515bc209c
+        specifier: github:aantenore/semwitness#7f54e8021ae802b9e0ef3793e39a609cc0faf3b5
+        version: https://codeload.github.com/aantenore/semwitness/tar.gz/7f54e8021ae802b9e0ef3793e39a609cc0faf3b5
 
   packages/benchmark-core: {}
+
+  packages/cli-io: {}
 
   packages/codex-host:
     dependencies:
@@ -98,14 +124,16 @@ importers:
         specifier: workspace:*
         version: link:../core
       semwitness:
-        specifier: github:aantenore/semwitness#01683a35a7305a5f30dc35077b722f5515bc209c
-        version: https://codeload.github.com/aantenore/semwitness/tar.gz/01683a35a7305a5f30dc35077b722f5515bc209c
+        specifier: github:aantenore/semwitness#7f54e8021ae802b9e0ef3793e39a609cc0faf3b5
+        version: https://codeload.github.com/aantenore/semwitness/tar.gz/7f54e8021ae802b9e0ef3793e39a609cc0faf3b5
 
   packages/core:
     dependencies:
       zod:
         specifier: 4.4.3
         version: 4.4.3
+
+  packages/qualification-core: {}
 
   packages/store-memory:
     dependencies:
@@ -1332,14 +1360,14 @@ packages:
     engines: { node: ^20.19.0 || >=22.12.0 }
     hasBin: true
 
-  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/01683a35a7305a5f30dc35077b722f5515bc209c:
+  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/7f54e8021ae802b9e0ef3793e39a609cc0faf3b5:
     resolution:
       {
         gitHosted: true,
-        integrity: sha512-+K49/9fZ2xqC3TOp+j/EzpGAMIZMwGoT/71/NhVJnposnJwti5Dy7eLx+4AADL3ouGmamkA5k1m5NiipiqUwOA==,
-        tarball: https://codeload.github.com/aantenore/semwitness/tar.gz/01683a35a7305a5f30dc35077b722f5515bc209c,
+        integrity: sha512-SGb6GiG8WGEY+A1g0zWsCsJz2Vuy6lxIv8o5VosPall4JHWEjArJFIIj6/HHkjSu9VFvOr/hbC8qCQXkjvMeVg==,
+        tarball: https://codeload.github.com/aantenore/semwitness/tar.gz/7f54e8021ae802b9e0ef3793e39a609cc0faf3b5,
       }
-    version: 0.5.0-alpha.3
+    version: 0.5.0-alpha.5
     engines: { node: ">=24" }
     hasBin: true
 
@@ -2092,7 +2120,7 @@ snapshots:
       "@rolldown/binding-win32-arm64-msvc": 1.1.5
       "@rolldown/binding-win32-x64-msvc": 1.1.5
 
-  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/01683a35a7305a5f30dc35077b722f5515bc209c:
+  semwitness@https://codeload.github.com/aantenore/semwitness/tar.gz/7f54e8021ae802b9e0ef3793e39a609cc0faf3b5:
     dependencies:
       "@ai-sdk/openai-compatible": 3.0.7(zod@4.4.3)
       "@ai-sdk/provider": 4.0.3
