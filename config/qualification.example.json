@@ -1,0 +1,24 @@
+{
+  "schema": "io.github.aantenore.intentabi/qualification-config/v1alpha1",
+  "classification": "shadow-qualification",
+  "protocolDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "qualification": {
+    "seed": "replace-with-a-frozen-protocol-seed",
+    "maxCases": 5000,
+    "maxDatasetBytes": 33554432,
+    "maxEvidenceBytes": 134217728,
+    "maxRecordBytes": 262144,
+    "maxArtifactBytes": 134217728
+  },
+  "evidence": {
+    "hmacSecretEnv": "INTENTABI_QUALIFICATION_HMAC_SECRET",
+    "keyId": "replace-with-a-rotatable-key-id"
+  },
+  "authority": {
+    "kind": "semwitness-intent-cache-promotion",
+    "expectedEvaluator": {
+      "id": "semwitness-intent-cache-promotion-evaluator",
+      "version": "1"
+    }
+  }
+}

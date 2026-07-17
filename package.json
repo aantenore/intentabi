@@ -36,6 +36,7 @@
     "format:check": "prettier --check .",
     "lint": "oxlint --deny-warnings apps packages",
     "prepack": "pnpm run build",
+    "qualify": "tsx apps/qualification/src/bin.ts",
     "shadow": "tsx apps/cli/src/bin.ts shadow run",
     "smoke:agentic-sdlc": "pnpm run build && node scripts/smoke-agentic-sdlc.mjs",
     "test": "pnpm run build && pnpm -r --if-present run test",

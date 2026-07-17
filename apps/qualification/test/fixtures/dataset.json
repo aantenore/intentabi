@@ -1,0 +1,23 @@
+{
+  "schema": "io.github.aantenore.intentabi/qualification-dataset/v1alpha1",
+  "classification": "private-held-out",
+  "split": "held-out",
+  "id": "PRIVATE_DATASET_CANARY",
+  "protocolDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "cases": [
+    {
+      "id": "PRIVATE_CASE_ALPHA_CANARY",
+      "balanceCellId": "PRIVATE_BALANCE_CELL_CANARY",
+      "cohort": "population",
+      "difficulty": "simple",
+      "cacheRegime": "cold"
+    },
+    {
+      "id": "PRIVATE_CASE_BETA_CANARY",
+      "balanceCellId": "PRIVATE_BALANCE_CELL_CANARY",
+      "cohort": "population",
+      "difficulty": "simple",
+      "cacheRegime": "cold"
+    }
+  ]
+}

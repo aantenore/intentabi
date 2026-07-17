@@ -1,0 +1,52 @@
+{
+  "name": "@intentabi/qualification",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "description": "Offline, shadow-only SemWitness qualification composition for IntentABI.",
+  "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
+  "homepage": "https://github.com/aantenore/intentabi#readme",
+  "bugs": {
+    "url": "https://github.com/aantenore/intentabi/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aantenore/intentabi.git",
+    "directory": "apps/qualification"
+  },
+  "keywords": [
+    "evaluation",
+    "intent-normalization",
+    "semwitness",
+    "shadow-qualification"
+  ],
+  "type": "module",
+  "license": "Apache-2.0",
+  "bin": {
+    "intentabi-qualify": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json",
+    "prepack": "pnpm run build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@intentabi/adapter-semwitness": "workspace:*",
+    "@intentabi/cli-io": "workspace:*",
+    "@intentabi/core": "workspace:*",
+    "@intentabi/qualification-core": "workspace:*",
+    "zod": "4.4.3"
+  }
+}

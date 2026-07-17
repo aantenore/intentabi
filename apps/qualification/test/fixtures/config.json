@@ -1,0 +1,24 @@
+{
+  "schema": "io.github.aantenore.intentabi/qualification-config/v1alpha1",
+  "classification": "shadow-qualification",
+  "protocolDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "qualification": {
+    "seed": "qualification-fixture-seed",
+    "maxCases": 8,
+    "maxDatasetBytes": 1048576,
+    "maxEvidenceBytes": 1048576,
+    "maxRecordBytes": 65536,
+    "maxArtifactBytes": 1048576
+  },
+  "evidence": {
+    "hmacSecretEnv": "QUALIFICATION_HMAC_SECRET",
+    "keyId": "qualification-fixture-v1"
+  },
+  "authority": {
+    "kind": "semwitness-intent-cache-promotion",
+    "expectedEvaluator": {
+      "id": "semwitness-intent-cache-promotion-evaluator",
+      "version": "1"
+    }
+  }
+}
