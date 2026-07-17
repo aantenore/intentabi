@@ -39,5 +39,8 @@
     "prepack": "pnpm run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@intentabi/core": "workspace:*"
   }
 }

@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+export * from "./cache-impact.js";
+
 export const CODEX_BENCH_PLAN_SCHEMA =
   "io.github.aantenore.intentabi/codex-bench-plan/v1alpha1" as const;
 export const CODEX_BENCH_RECEIPT_SCHEMA =

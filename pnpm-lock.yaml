@@ -114,7 +114,11 @@ importers:
         specifier: github:aantenore/semwitness#de1e30509fdcf92f021dc0db06f3fa6ad1d48c80
         version: https://codeload.github.com/aantenore/semwitness/tar.gz/de1e30509fdcf92f021dc0db06f3fa6ad1d48c80
 
-  packages/benchmark-core: {}
+  packages/benchmark-core:
+    dependencies:
+      "@intentabi/core":
+        specifier: workspace:*
+        version: link:../core
 
   packages/cli-io: {}
 
