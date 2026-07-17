@@ -16,6 +16,7 @@ import { MemoryShadowStore } from "@intentabi/store-memory";
 import { z } from "zod";
 
 import { parseIntentAbiConfig, strictJsonValueSchema } from "./config.js";
+import { cacheImpactUsage, runCacheImpactCli } from "./cache-impact.js";
 
 const requestSchema = z
   .object({
@@ -36,6 +37,9 @@ export async function runCli(
   environment: Readonly<Record<string, string | undefined>>,
   io: CliIo,
 ): Promise<number> {
+  if (argv[0] === "cache-impact") {
+    return runCacheImpactCli(argv, environment, io);
+  }
   try {
     if (argv.length === 1 && argv[0] === "--help") {
       io.stdout(`${usage()}\n`);
@@ -225,7 +229,10 @@ function childEnvironment(
 }
 
 function usage(): string {
-  return "Usage: intentabi shadow run --config <path> --request <path>";
+  return [
+    "Usage: intentabi shadow run --config <path> --request <path>",
+    cacheImpactUsage(),
+  ].join("\n");
 }
 
 class PublicCliError extends Error {}

@@ -1,0 +1,66 @@
+{
+  "schema": "io.github.aantenore.intentabi/cache-impact-workload/v1alpha1",
+  "datasetId": "configured-paraphrase-demo-v1",
+  "cases": [
+    {
+      "source": "Show the current Agentic SDLC project status.",
+      "locale": "en-US",
+      "routeInput": {
+        "command": "status",
+        "project": "demo"
+      },
+      "expectedValueDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "usage": {
+        "modelInputTokens": 20,
+        "modelOutputTokens": 10,
+        "normalizationInputTokens": 0,
+        "normalizationOutputTokens": 0
+      }
+    },
+    {
+      "source": "What is the status of this SDLC project?",
+      "locale": "en-US",
+      "routeInput": {
+        "command": "status",
+        "project": "demo"
+      },
+      "expectedValueDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "usage": {
+        "modelInputTokens": 21,
+        "modelOutputTokens": 10,
+        "normalizationInputTokens": 0,
+        "normalizationOutputTokens": 0
+      }
+    },
+    {
+      "source": "Mostra lo stato corrente del progetto Agentic SDLC.",
+      "locale": "it-IT",
+      "routeInput": {
+        "command": "status",
+        "project": "demo"
+      },
+      "expectedValueDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "usage": {
+        "modelInputTokens": 22,
+        "modelOutputTokens": 10,
+        "normalizationInputTokens": 0,
+        "normalizationOutputTokens": 0
+      }
+    },
+    {
+      "source": "Show the current Agentic SDLC project status.",
+      "locale": "en-US",
+      "routeInput": {
+        "command": "status",
+        "project": "demo"
+      },
+      "expectedValueDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "usage": {
+        "modelInputTokens": 20,
+        "modelOutputTokens": 10,
+        "normalizationInputTokens": 0,
+        "normalizationOutputTokens": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "schema": "io.github.aantenore.intentabi/cache-impact-config/v1alpha1",
+  "mode": "shadow",
+  "semwitness": {
+    "registryPath": "../fixtures/intent-registry.json",
+    "policyDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "hmacSecretEnv": "INTENTABI_HMAC_SECRET",
+    "scopeEpoch": "demo-v1",
+    "expectedScope": {
+      "tenant": "demo",
+      "authorization": "reader"
+    },
+    "routeBindings": {
+      "read-project-status": {
+        "command": "status",
+        "project": "demo"
+      }
+    }
+  },
+  "study": {
+    "keyId": "cache-impact-demo-v1",
+    "inspectionTimeoutMs": 500,
+    "route": {
+      "id": "agentic-sdlc.fixture",
+      "revisionDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    }
+  }
+}

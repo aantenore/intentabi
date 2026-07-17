@@ -47,6 +47,8 @@
   "dependencies": {
     "@intentabi/adapter-agentic-sdlc": "workspace:*",
     "@intentabi/adapter-semwitness": "workspace:*",
+    "@intentabi/benchmark-core": "workspace:*",
+    "@intentabi/cli-io": "workspace:*",
     "@intentabi/core": "workspace:*",
     "@intentabi/store-memory": "workspace:*",
     "zod": "4.4.3"

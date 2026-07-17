@@ -30,6 +30,7 @@
   "packageManager": "pnpm@11.13.0",
   "scripts": {
     "build": "pnpm -r --if-present run build",
+    "cache:impact": "tsx apps/cli/src/bin.ts cache-impact evaluate",
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test",
     "codex:bench": "tsx apps/codex-bench/src/bin.ts",
     "format": "prettier --write .",

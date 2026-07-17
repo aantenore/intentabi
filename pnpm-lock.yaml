@@ -34,6 +34,12 @@ importers:
       "@intentabi/adapter-semwitness":
         specifier: workspace:*
         version: link:../../packages/adapter-semwitness
+      "@intentabi/benchmark-core":
+        specifier: workspace:*
+        version: link:../../packages/benchmark-core
+      "@intentabi/cli-io":
+        specifier: workspace:*
+        version: link:../../packages/cli-io
       "@intentabi/core":
         specifier: workspace:*
         version: link:../../packages/core

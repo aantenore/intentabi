@@ -144,3 +144,132 @@ describe("intentabi shadow run", () => {
     }
   });
 });
+
+describe("intentabi cache-impact evaluate", () => {
+  it("runs the real SemWitness adapter and emits a content-free value report", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const exitCode = await runCli(
+      [
+        "cache-impact",
+        "evaluate",
+        "--config",
+        resolve(root, "config/cache-impact.example.json"),
+        "--workload",
+        resolve(root, "fixtures/cache-impact-workload.json"),
+      ],
+      { INTENTABI_HMAC_SECRET: "x".repeat(32) },
+      {
+        stdout: (value) => stdout.push(value),
+        stderr: (value) => stderr.push(value),
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    const event = JSON.parse(stdout[0] ?? "{}");
+    expect(event).toMatchObject({
+      event: "intentabi.cache-impact.report",
+      report: {
+        mode: "shadow",
+        activationAuthorized: false,
+        summary: {
+          requests: 4,
+          raw: { safeHits: 1, unsafeHits: 0 },
+          normalized: { safeHits: 3, unsafeHits: 0 },
+          safeHitLift: 2,
+          tokens: {
+            rawModelInput: "63",
+            normalizedModelInput: "20",
+            netInputDeltaVersusRaw: "43",
+            netOutputDeltaVersusRaw: "20",
+            netTotalDeltaVersusRaw: "63",
+          },
+          gate: { passed: true, reasons: [] },
+        },
+      },
+    });
+    const serialized = JSON.stringify(event);
+    expect(serialized).not.toContain(
+      "Show the current Agentic SDLC project status.",
+    );
+    expect(serialized).not.toContain(
+      "What is the status of this SDLC project?",
+    );
+  });
+
+  it("returns two for a complete diagnostic run that fails its safety/value gate", async () => {
+    const directory = mkdtempSync(resolve(tmpdir(), "intentabi-impact-"));
+    const workloadPath = resolve(directory, "workload.json");
+    const workload = JSON.parse(
+      readFileSync(
+        resolve(root, "fixtures/cache-impact-workload.json"),
+        "utf8",
+      ),
+    );
+    workload.cases[1].expectedValueDigest =
+      "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+    writeFileSync(workloadPath, JSON.stringify(workload));
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    try {
+      const exitCode = await runCli(
+        [
+          "cache-impact",
+          "evaluate",
+          "--config",
+          resolve(root, "config/cache-impact.example.json"),
+          "--workload",
+          workloadPath,
+        ],
+        { INTENTABI_HMAC_SECRET: "x".repeat(32) },
+        {
+          stdout: (value) => stdout.push(value),
+          stderr: (value) => stderr.push(value),
+        },
+      );
+
+      expect(exitCode).toBe(2);
+      expect(stderr).toEqual([]);
+      expect(JSON.parse(stdout[0] ?? "{}")).toMatchObject({
+        report: {
+          summary: {
+            normalized: { unsafeHits: 1 },
+            gate: {
+              passed: false,
+              reasons: expect.arrayContaining(["NORMALIZED_UNSAFE_HITS"]),
+            },
+          },
+        },
+      });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed on missing key material and malformed options", async () => {
+    const stderr: string[] = [];
+    const io = {
+      stdout: () => undefined,
+      stderr: (value: string) => stderr.push(value),
+    };
+    const args = [
+      "cache-impact",
+      "evaluate",
+      "--config",
+      resolve(root, "config/cache-impact.example.json"),
+      "--workload",
+      resolve(root, "fixtures/cache-impact-workload.json"),
+    ];
+
+    await expect(runCli(args, {}, io)).resolves.toBe(1);
+    await expect(
+      runCli(
+        ["cache-impact", "evaluate", "--config", "a", "--config", "b"],
+        {},
+        io,
+      ),
+    ).resolves.toBe(1);
+    expect(stderr.join("\n")).not.toContain("x".repeat(32));
+  });
+});
