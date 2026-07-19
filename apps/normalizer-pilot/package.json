@@ -1,0 +1,51 @@
+{
+  "name": "@intentabi/normalizer-pilot",
+  "version": "0.2.0-alpha.2",
+  "private": true,
+  "description": "External held-out normalizer evaluation for IntentABI.",
+  "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
+  "homepage": "https://github.com/aantenore/intentabi#readme",
+  "bugs": {
+    "url": "https://github.com/aantenore/intentabi/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aantenore/intentabi.git",
+    "directory": "apps/normalizer-pilot"
+  },
+  "keywords": [
+    "agentic-ai",
+    "intent-normalization",
+    "llm-evaluation",
+    "semantic-cache",
+    "semwitness"
+  ],
+  "type": "module",
+  "license": "Apache-2.0",
+  "bin": {
+    "intentabi-normalizer-pilot": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json",
+    "prepack": "pnpm run build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@intentabi/cli-io": "workspace:*",
+    "semwitness": "github:aantenore/semwitness#de1e30509fdcf92f021dc0db06f3fa6ad1d48c80",
+    "zod": "4.4.3"
+  }
+}

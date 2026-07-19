@@ -1,0 +1,49 @@
+{
+  "schema": "io.github.aantenore.intentabi/normalizer-pilot-config/v1alpha1",
+  "classification": "external-normalizer-diagnostic",
+  "source": {
+    "kind": "clinc150",
+    "revision": "828f8093932c8fe6ca7936c3d2e52903b1c523de",
+    "sha256": "36923c3705a59e08fe9c3883d8bc2dd966ef93e22cb78ac41171782a698d56e0",
+    "seed": "clinc150-read-v1",
+    "locale": "en-US",
+    "labels": [
+      "bill_balance",
+      "bill_due",
+      "credit_score",
+      "exchange_rate",
+      "flight_status",
+      "interest_rate",
+      "pto_balance",
+      "pto_request_status",
+      "rewards_balance",
+      "spending_history",
+      "transactions",
+      "weather"
+    ],
+    "trainingAliasesPerIntent": 8,
+    "heldOutPerIntent": 8,
+    "outOfScopeCases": 32
+  },
+  "compiler": {
+    "kind": "openai-compatible",
+    "deploymentRevisionDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "credentialKeyId": "local-pilot-no-credential",
+    "provider": {
+      "name": "local-openai-compatible",
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "model": "qwen3:4b"
+    },
+    "policy": {
+      "requestTimeoutMs": 120000,
+      "maxResponseBytes": 4194304,
+      "maxOutputTokens": 512,
+      "maxPromptBytes": 1048576
+    }
+  },
+  "evaluation": {
+    "attemptsPerCase": 2,
+    "maxRequests": 256,
+    "maxArtifactBytes": 16777216
+  }
+}

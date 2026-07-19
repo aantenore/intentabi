@@ -86,6 +86,18 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
 
+  apps/normalizer-pilot:
+    dependencies:
+      "@intentabi/cli-io":
+        specifier: workspace:*
+        version: link:../../packages/cli-io
+      semwitness:
+        specifier: github:aantenore/semwitness#de1e30509fdcf92f021dc0db06f3fa6ad1d48c80
+        version: https://codeload.github.com/aantenore/semwitness/tar.gz/de1e30509fdcf92f021dc0db06f3fa6ad1d48c80
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
   apps/qualification:
     dependencies:
       "@intentabi/adapter-semwitness":

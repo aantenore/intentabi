@@ -37,6 +37,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "oxlint --deny-warnings apps packages",
+    "pilot": "tsx apps/normalizer-pilot/src/bin.ts",
     "prepack": "pnpm run build",
     "qualify": "tsx apps/qualification/src/bin.ts",
     "shadow": "tsx apps/cli/src/bin.ts shadow run",
