@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { isProxy } from "node:util/types";
 
 import type {
   HmacRouteInputDigest,
@@ -17,6 +18,9 @@ import {
   hmacIntentSourceDigest,
   hmacScopeDigest,
   normalizeIntentShadow,
+  type IntentCompilerResult,
+  type IntentNormalizerManifest,
+  type IntentProposalCompiler,
 } from "semwitness/intent";
 import {
   assembleIntentCachePromotionEvidence,
@@ -36,16 +40,21 @@ import {
 export * from "./qualification.js";
 
 /**
- * Exact normalization authority pinned by this source release. Cache-impact
- * provenance binds this identifier together with the complete registry bytes
- * and inspector configuration so a changed authority cannot reuse a dataset
- * binding silently.
+ * Inspector contract and SemWitness dependency pinned by this source release.
+ * Cache-impact provenance additionally binds the injected compiler manifest and
+ * authoritative registry configuration so a changed authority cannot reuse a
+ * dataset binding silently.
  */
 export const SEMWITNESS_INTENT_INSPECTOR_IMPLEMENTATION =
-  "io.github.aantenore.intentabi/semwitness-intent-inspector/v1+semwitness-de1e30509fdcf92f021dc0db06f3fa6ad1d48c80" as const;
+  "io.github.aantenore.intentabi/semwitness-intent-inspector/v2+semwitness-de1e30509fdcf92f021dc0db06f3fa6ad1d48c80" as const;
 
 export interface SemWitnessInspectorOptions {
   readonly registrySource: string;
+  /**
+   * Candidate generation only. The declarative registry remains authoritative
+   * for operation resolution, effect, and the complete IntentIR.
+   */
+  readonly compiler?: IntentProposalCompiler;
   readonly policyDigest: Sha256Digest;
   readonly hmacSecret: Uint8Array | string;
   readonly expectedScope: {
@@ -160,7 +169,8 @@ function serializeParsedPromotionEvidence(
  * scope/route-bound correlation metadata.
  */
 export class SemWitnessIntentInspector implements IntentInspector {
-  readonly #normalizer: DeclarativeIntentNormalizer;
+  readonly #compiler: IntentProposalCompiler;
+  readonly #registry: DeclarativeIntentNormalizer;
   readonly #policyDigest: Sha256Digest;
   readonly #hmacSecret: Buffer;
   readonly #expectedTenant: string;
@@ -175,7 +185,8 @@ export class SemWitnessIntentInspector implements IntentInspector {
       );
     }
     this.#hmacSecret = secret;
-    this.#normalizer = new DeclarativeIntentNormalizer(options.registrySource);
+    this.#registry = new DeclarativeIntentNormalizer(options.registrySource);
+    this.#compiler = snapshotCompiler(options.compiler ?? this.#registry);
     this.#policyDigest = options.policyDigest;
     this.#expectedTenant = hmacScopeDigest(
       "tenant",
@@ -235,12 +246,14 @@ export class SemWitnessIntentInspector implements IntentInspector {
       "shadow-binding",
       this.#hmacSecret,
       canonicalJson([
+        SEMWITNESS_INTENT_INSPECTOR_IMPLEMENTATION,
         this.#policyDigest,
-        this.#normalizer.manifest.normalizer.id,
-        this.#normalizer.manifest.normalizer.version,
-        this.#normalizer.manifest.normalizer.artifactDigest,
-        this.#normalizer.manifest.normalizer.configDigest,
-        this.#normalizer.manifest.ontology.digest,
+        this.#compiler.manifest,
+        {
+          configDigest: this.#registry.manifest.normalizer.configDigest,
+          ontology: this.#registry.ontology,
+          minimumConfidencePpm: this.#registry.minimumConfidencePpm,
+        },
         request.route.id,
         request.route.revisionDigest,
         scopeDigest,
@@ -262,24 +275,43 @@ export class SemWitnessIntentInspector implements IntentInspector {
       };
     }
 
-    const proposal = await this.#normalizer.compile({
-      source: request.source,
-      locale: request.locale,
-      ...(request.signal === undefined ? {} : { signal: request.signal }),
-    });
-    const result = await normalizeIntentShadow({
-      source: request.source,
-      locale: request.locale,
-      sourceDigest,
-      sourceDigestSecret: this.#hmacSecret,
-      policyDigest: this.#policyDigest,
-      compiler: {
-        manifest: this.#normalizer.manifest,
-        compile: () => proposal,
-      },
-      registry: this.#normalizer,
-      ...(request.signal === undefined ? {} : { signal: request.signal }),
-    });
+    let proposal: IntentCompilerResult;
+    try {
+      proposal = await this.#compiler.compile({
+        source: request.source,
+        locale: request.locale,
+        ...(request.signal === undefined ? {} : { signal: request.signal }),
+      });
+    } catch {
+      return {
+        status: "bypass" as const,
+        ...base,
+        reasons: ["INTENT_COMPILER_FAILURE"],
+      };
+    }
+
+    let result: Awaited<ReturnType<typeof normalizeIntentShadow>>;
+    try {
+      result = await normalizeIntentShadow({
+        source: request.source,
+        locale: request.locale,
+        sourceDigest,
+        sourceDigestSecret: this.#hmacSecret,
+        policyDigest: this.#policyDigest,
+        compiler: {
+          manifest: this.#compiler.manifest,
+          compile: () => proposal,
+        },
+        registry: this.#registry,
+        ...(request.signal === undefined ? {} : { signal: request.signal }),
+      });
+    } catch {
+      return {
+        status: "bypass" as const,
+        ...base,
+        reasons: ["INTENT_COMPILER_FAILURE"],
+      };
+    }
     if (result.status === "bypass") {
       return {
         status: "bypass" as const,
@@ -294,10 +326,15 @@ export class SemWitnessIntentInspector implements IntentInspector {
         reasons: ["EFFECT_NOT_SHADOW_ELIGIBLE"],
       };
     }
-    if (
-      proposal.status !== "proposed" ||
-      this.#routeBindings.get(proposal.operationId) !== routeInputCanonical
-    ) {
+    const operationId = proposedOperationId(proposal);
+    if (operationId === undefined) {
+      return {
+        status: "bypass" as const,
+        ...base,
+        reasons: ["INTENT_COMPILER_FAILURE"],
+      };
+    }
+    if (this.#routeBindings.get(operationId) !== routeInputCanonical) {
       return {
         status: "bypass" as const,
         ...base,
@@ -338,6 +375,161 @@ export class SemWitnessIntentInspector implements IntentInspector {
       )
     );
   }
+}
+
+function snapshotCompiler(
+  source: IntentProposalCompiler,
+): IntentProposalCompiler {
+  try {
+    if (source === null || typeof source !== "object" || isProxy(source)) {
+      throw new Error();
+    }
+    const compile = dataMethod(source, "compile");
+    const manifestSource = ownEnumerableDataValue(source, "manifest");
+    if (compile === undefined || manifestSource === undefined)
+      throw new Error();
+    const manifest = snapshotCompilerManifest(manifestSource);
+    return Object.freeze({
+      manifest,
+      compile: (request: Parameters<IntentProposalCompiler["compile"]>[0]) =>
+        Reflect.apply(compile, source, [request]) as ReturnType<
+          IntentProposalCompiler["compile"]
+        >,
+    });
+  } catch {
+    throw new TypeError("SemWitness intent compiler is invalid");
+  }
+}
+
+function dataMethod(
+  source: object,
+  key: string,
+): IntentProposalCompiler["compile"] | undefined {
+  try {
+    let current: object | null = source;
+    while (current !== null) {
+      if (isProxy(current)) return undefined;
+      const descriptor = Object.getOwnPropertyDescriptor(current, key);
+      if (descriptor !== undefined) {
+        return "value" in descriptor && typeof descriptor.value === "function"
+          ? (descriptor.value as IntentProposalCompiler["compile"])
+          : undefined;
+      }
+      current = Object.getPrototypeOf(current);
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
+function ownEnumerableDataValue(source: object, key: string): unknown {
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(source, key);
+    return descriptor?.enumerable === true && "value" in descriptor
+      ? descriptor.value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function snapshotCompilerManifest(source: unknown): IntentNormalizerManifest {
+  const manifest = plainDataRecord(source);
+  const normalizer = plainDataRecord(manifest?.normalizer);
+  const ontology = plainDataRecord(manifest?.ontology);
+  if (
+    manifest === undefined ||
+    !hasExactKeys(manifest, ["normalizer", "ontology"]) ||
+    normalizer === undefined ||
+    !hasExactKeys(normalizer, [
+      "id",
+      "version",
+      "artifactDigest",
+      "configDigest",
+    ]) ||
+    ontology === undefined ||
+    !hasExactKeys(ontology, ["id", "version", "digest"]) ||
+    typeof normalizer.id !== "string" ||
+    !/^[a-z0-9][a-z0-9._-]{0,127}$/u.test(normalizer.id) ||
+    typeof normalizer.version !== "string" ||
+    !/^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$/u.test(normalizer.version) ||
+    !isSha256Digest(normalizer.artifactDigest) ||
+    !isSha256Digest(normalizer.configDigest) ||
+    typeof ontology.id !== "string" ||
+    !/^[a-z0-9][a-z0-9._-]{0,127}$/u.test(ontology.id) ||
+    typeof ontology.version !== "string" ||
+    !/^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$/u.test(ontology.version) ||
+    !isSha256Digest(ontology.digest)
+  ) {
+    throw new TypeError("SemWitness intent compiler manifest is invalid");
+  }
+  return Object.freeze({
+    normalizer: Object.freeze({
+      id: normalizer.id,
+      version: normalizer.version,
+      artifactDigest: normalizer.artifactDigest,
+      configDigest: normalizer.configDigest,
+    }),
+    ontology: Object.freeze({
+      id: ontology.id,
+      version: ontology.version,
+      digest: ontology.digest,
+    }),
+  });
+}
+
+function proposedOperationId(source: unknown): string | undefined {
+  const proposal = plainDataRecord(source);
+  return proposal?.status === "proposed" &&
+    typeof proposal.operationId === "string" &&
+    /^[a-z0-9][a-z0-9._-]{0,127}$/u.test(proposal.operationId)
+    ? proposal.operationId
+    : undefined;
+}
+
+function plainDataRecord(source: unknown): Record<string, unknown> | undefined {
+  if (
+    source === null ||
+    typeof source !== "object" ||
+    Array.isArray(source) ||
+    isProxy(source)
+  ) {
+    return undefined;
+  }
+  try {
+    const prototype = Object.getPrototypeOf(source);
+    if (prototype !== Object.prototype && prototype !== null) return undefined;
+    if (Object.getOwnPropertySymbols(source).length !== 0) return undefined;
+    const result: Record<string, unknown> = Object.create(null) as Record<
+      string,
+      unknown
+    >;
+    for (const [key, descriptor] of Object.entries(
+      Object.getOwnPropertyDescriptors(source),
+    )) {
+      if (!descriptor.enumerable || !("value" in descriptor)) return undefined;
+      result[key] = descriptor.value;
+    }
+    return result;
+  } catch {
+    return undefined;
+  }
+}
+
+function hasExactKeys(
+  source: Readonly<Record<string, unknown>>,
+  expected: readonly string[],
+): boolean {
+  const keys = Object.keys(source);
+  return (
+    keys.length === expected.length &&
+    expected.every((key) => Object.hasOwn(source, key))
+  );
+}
+
+function isSha256Digest(source: unknown): source is Sha256Digest {
+  return typeof source === "string" && /^sha256:[a-f0-9]{64}$/u.test(source);
 }
 
 function opaqueDigest(

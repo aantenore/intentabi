@@ -1,6 +1,13 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
+import {
+  ConsensusIntentCompiler,
+  DeclarativeIntentNormalizer,
+  type IntentCompilerResult,
+  type IntentProposalCompiler,
+} from "semwitness/intent";
 import {
   evaluateIntentCachePromotionEvidence,
   parseIntentCachePromotionEvidenceJsonl,
@@ -35,6 +42,43 @@ const route = {
 };
 const routeInput = { command: "status", project: "demo" };
 
+function digest(value: string): `sha256:${string}` {
+  return `sha256:${createHash("sha256").update(value, "utf8").digest("hex")}`;
+}
+
+function fixedCompiler(
+  id: string,
+  result: IntentCompilerResult | (() => IntentCompilerResult),
+): IntentProposalCompiler {
+  const registry = new DeclarativeIntentNormalizer(registrySource);
+  return Object.freeze({
+    manifest: Object.freeze({
+      normalizer: Object.freeze({
+        id,
+        version: "1.0.0",
+        artifactDigest: digest(`${id}-artifact`),
+        configDigest: digest(`${id}-config`),
+      }),
+      ontology: registry.ontology,
+    }),
+    compile: () => (typeof result === "function" ? result() : result),
+  });
+}
+
+function externalInspector(
+  compiler: IntentProposalCompiler,
+  source = registrySource,
+): SemWitnessIntentInspector {
+  return new SemWitnessIntentInspector({
+    registrySource: source,
+    compiler,
+    policyDigest: `sha256:${"b".repeat(64)}`,
+    hmacSecret: secret,
+    expectedScope: scope,
+    routeBindings: { "read-project-status": routeInput },
+  });
+}
+
 function inspectionRequest(source: string) {
   return {
     source,
@@ -56,6 +100,9 @@ describe("SemWitnessIntentInspector", () => {
 
     expect(revision).toBeDefined();
     if (revision === undefined) throw new Error("dependency revision missing");
+    expect(SEMWITNESS_INTENT_INSPECTOR_IMPLEMENTATION).toContain(
+      "semwitness-intent-inspector/v2+",
+    );
     expect(SEMWITNESS_INTENT_INSPECTOR_IMPLEMENTATION.endsWith(revision)).toBe(
       true,
     );
@@ -142,6 +189,153 @@ describe("SemWitnessIntentInspector", () => {
       scopeDigest: expect.stringMatching(/^hmac-sha256:shadow-scope:/u),
       bindingDigest: expect.stringMatching(/^hmac-sha256:shadow-binding:/u),
       routeInputDigest: expect.stringMatching(/^hmac-sha256:route-input:/u),
+    });
+  });
+
+  it("accepts an external compiler proposal while the declarative registry remains authoritative", async () => {
+    const source = "Could you give me the current project status?";
+    const compiler = fixedCompiler("external-project-intent", {
+      status: "proposed",
+      operationId: "read-project-status",
+      confidencePpm: 1_000_000,
+      ambiguous: false,
+    });
+    const external = externalInspector(compiler);
+
+    const result = await external.inspect(inspectionRequest(source));
+    const baseline = await inspector.inspect(inspectionRequest(source));
+
+    expect(result).toMatchObject({ status: "eligible", effect: "read" });
+    expect(baseline).toMatchObject({
+      status: "bypass",
+      reasons: ["INTENT_NO_MATCH"],
+    });
+    expect(result.bindingDigest).not.toBe(baseline.bindingDigest);
+  });
+
+  it("binds registry configuration independently from the compiler manifest", async () => {
+    const compiler = fixedCompiler("registry-binding-probe", {
+      status: "proposed",
+      operationId: "read-project-status",
+      confidencePpm: 1_000_000,
+      ambiguous: false,
+    });
+    const document = JSON.parse(registrySource) as {
+      operations: Array<{ aliases: Array<{ locale: string; text: string }> }>;
+    };
+    document.operations[0]!.aliases.push({
+      locale: "en-US",
+      text: "Read this project's status.",
+    });
+    const first = await externalInspector(compiler).inspect(
+      inspectionRequest("Show the current Agentic SDLC project status."),
+    );
+    const second = await externalInspector(
+      compiler,
+      JSON.stringify(document),
+    ).inspect(
+      inspectionRequest("Show the current Agentic SDLC project status."),
+    );
+
+    expect(first.status).toBe("eligible");
+    expect(second.status).toBe("eligible");
+    expect(first.bindingDigest).not.toBe(second.bindingDigest);
+  });
+
+  it("rejects accessor-bearing compiler manifests without invoking them", () => {
+    let invoked = false;
+    const hostile = Object.defineProperty(
+      { compile: () => ({ status: "bypass", reason: "INTENT_NO_MATCH" }) },
+      "manifest",
+      {
+        enumerable: true,
+        get: () => {
+          invoked = true;
+          throw new Error("private manifest getter");
+        },
+      },
+    ) as unknown as IntentProposalCompiler;
+
+    expect(() => externalInspector(hostile)).toThrow(
+      "SemWitness intent compiler is invalid",
+    );
+    expect(invoked).toBe(false);
+  });
+
+  it("fails closed on compiler exceptions, malformed output, disagreement, unknown operations and effects", async () => {
+    const throwing = fixedCompiler("throwing-project-intent", () => {
+      throw new Error("private compiler failure");
+    });
+    const malformed = fixedCompiler("malformed-project-intent", {
+      status: "proposed",
+      operationId: "read-project-status",
+      confidencePpm: 1_000_000,
+      ambiguous: false,
+      unauthorized: true,
+    } as unknown as IntentCompilerResult);
+    const disagreement = new ConsensusIntentCompiler({
+      members: [
+        fixedCompiler("read-project-intent", {
+          status: "proposed",
+          operationId: "read-project-status",
+          confidencePpm: 1_000_000,
+          ambiguous: false,
+        }),
+        fixedCompiler("delete-project-intent", {
+          status: "proposed",
+          operationId: "delete-project",
+          confidencePpm: 1_000_000,
+          ambiguous: false,
+        }),
+      ],
+      policy: { strategy: "all-agree", maxCandidateEvidence: 4 },
+    });
+    const unknown = fixedCompiler("unknown-project-intent", {
+      status: "proposed",
+      operationId: "unknown-operation",
+      confidencePpm: 1_000_000,
+      ambiguous: false,
+    });
+    const irreversible = fixedCompiler("irreversible-project-intent", {
+      status: "proposed",
+      operationId: "delete-project",
+      confidencePpm: 1_000_000,
+      ambiguous: false,
+    });
+
+    await expect(
+      externalInspector(throwing).inspect(inspectionRequest("private source")),
+    ).resolves.toMatchObject({
+      status: "bypass",
+      reasons: ["INTENT_COMPILER_FAILURE"],
+    });
+    await expect(
+      externalInspector(malformed).inspect(inspectionRequest("private source")),
+    ).resolves.toMatchObject({
+      status: "bypass",
+      reasons: ["INTENT_COMPILER_FAILURE"],
+    });
+    await expect(
+      externalInspector(disagreement).inspect(
+        inspectionRequest("ambiguous source"),
+      ),
+    ).resolves.toMatchObject({
+      status: "bypass",
+      reasons: ["INTENT_AMBIGUOUS"],
+    });
+    await expect(
+      externalInspector(unknown).inspect(inspectionRequest("unknown source")),
+    ).resolves.toMatchObject({
+      status: "bypass",
+      reasons: ["INTENT_REGISTRY_MISMATCH"],
+    });
+    await expect(
+      externalInspector(irreversible).inspect(
+        inspectionRequest("destructive source"),
+      ),
+    ).resolves.toMatchObject({
+      status: "bypass",
+      reasons: ["EFFECT_NOT_SHADOW_ELIGIBLE"],
     });
   });
 });
