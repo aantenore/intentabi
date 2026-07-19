@@ -405,9 +405,11 @@ async function recoverPublishedArtifact(
   assertPrivateArtifactWithLinks(finalBefore, 2n);
   assertPrivateArtifactWithLinks(temporaryBefore, 2n);
 
-  await unlink(temporaryPath).catch((error: unknown) => {
-    if (!hasCode(error, "ENOENT")) throw new PrivateRunStoreError();
-  });
+  // Concurrent Windows unlink attempts can report an error other than ENOENT
+  // after a peer has already won the recovery race. The filesystem state below
+  // is the authority: recovery succeeds only when the original inode remains
+  // private, has one link, and the exact publisher sibling is gone.
+  await unlink(temporaryPath).catch(() => undefined);
   const recovered = await revalidateRecoveredArtifact(
     path,
     state,
