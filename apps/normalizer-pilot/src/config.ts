@@ -3,7 +3,7 @@ import { z } from "zod";
 import { CLINC150_REVIEWED_READ_LABELS } from "./clinc150.js";
 
 export const NORMALIZER_PILOT_CONFIG_SCHEMA =
-  "io.github.aantenore.intentabi/normalizer-pilot-config/v1alpha1" as const;
+  "io.github.aantenore.intentabi/normalizer-pilot-config/v1alpha2" as const;
 export const NORMALIZER_PILOT_CLASSIFICATION =
   "external-normalizer-diagnostic" as const;
 
@@ -87,6 +87,11 @@ export const normalizerPilotConfigSchema = z
           .int()
           .min(1_024)
           .max(128 * 1024 * 1024),
+        maxCheckpointBytes: z
+          .number()
+          .int()
+          .min(1_024)
+          .max(8 * 1024 * 1024),
       })
       .strict(),
   })

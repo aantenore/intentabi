@@ -1,15 +1,18 @@
 import { createHash } from "node:crypto";
 
 import {
-  reservePrivateArtifact,
-  type PrivateArtifactReservation,
-} from "@intentabi/cli-io";
+  openPrivateRunStore,
+  type PrivateRunStore,
+} from "@intentabi/private-run-store";
 import {
   DeclarativeIntentNormalizer,
-  evaluateIntentNormalizer,
   parseIntentEvaluationJsonl,
+  runIntentNormalizerEvaluation,
+  type IntentEvaluationCheckpointStore,
+  type IntentEvaluationProgress,
   type IntentEvaluationReport,
   type IntentProposalCompiler,
+  type RunIntentNormalizerEvaluationResult,
 } from "semwitness/intent";
 import {
   OpenAICompatibleIntentCompiler,
@@ -20,13 +23,21 @@ import { prepareClinc150Pilot } from "./clinc150.js";
 import {
   EXAMPLE_DEPLOYMENT_REVISION_DIGEST,
   NORMALIZER_PILOT_CLASSIFICATION,
+  parseNormalizerPilotConfig,
   type NormalizerPilotConfig,
 } from "./config.js";
+import { createNormalizerPilotCheckpointStore } from "./checkpoint-store.js";
 
 export const NORMALIZER_PILOT_ARTIFACT_SCHEMA =
-  "io.github.aantenore.intentabi/normalizer-pilot-artifact/v1alpha1" as const;
+  "io.github.aantenore.intentabi/normalizer-pilot-artifact/v1alpha2" as const;
+export const NORMALIZER_PILOT_RUN_BINDING_SCHEMA =
+  "io.github.aantenore.intentabi/normalizer-pilot-run-binding/v2" as const;
+export const NORMALIZER_PILOT_ARTIFACT_NAME =
+  "normalizer-pilot-artifact.json" as const;
+export const NORMALIZER_PILOT_RUN_BINDING_NAME =
+  "normalizer-pilot-run-binding.json" as const;
 export const NORMALIZER_PILOT_SEMWITNESS_REVISION =
-  "de1e30509fdcf92f021dc0db06f3fa6ad1d48c80" as const;
+  "dc306c653f86ea6c33a46514d44de20a39caa97b" as const;
 
 export interface NormalizerPilotPreparation {
   readonly prepared: ReturnType<typeof prepareClinc150Pilot>;
@@ -44,6 +55,13 @@ export interface NormalizerPilotArtifact {
   readonly promotionManifest: "not-produced";
   readonly qualificationStatus: "external-evidence-required";
   readonly pilotRunBindingDigest: `sha256:${string}`;
+  readonly checkpointLineage: {
+    readonly protocol: "semwitness.intent-evaluation-checkpoint/v1";
+    readonly semwitnessRevision: typeof NORMALIZER_PILOT_SEMWITNESS_REVISION;
+    readonly evaluationBindingDigest: `sha256:${string}`;
+    readonly completedObservations: number;
+    readonly totalObservations: number;
+  };
   readonly source: {
     readonly kind: "clinc150";
     readonly revision: string;
@@ -83,18 +101,26 @@ export interface NormalizerPilotDependencies {
     readonly fixture: ReturnType<typeof parseIntentEvaluationJsonl>;
     readonly split: "held-out";
     readonly attempts: number;
-  }): Promise<IntentEvaluationReport>;
-  reserveArtifact(
-    path: string,
-    maximumBytes: number,
-  ): Promise<PrivateArtifactReservation>;
+    readonly checkpointStore: IntentEvaluationCheckpointStore;
+    readonly checkpointBindingDigest: `sha256:${string}`;
+    readonly maxNewObservations?: number;
+  }): Promise<RunIntentNormalizerEvaluationResult>;
+  openRunStore(input: {
+    readonly path: string;
+    readonly partitions: readonly string[];
+  }): Promise<PrivateRunStore>;
+  createCheckpointStore(input: {
+    readonly store: PrivateRunStore;
+    readonly maximumBytes: number;
+  }): IntentEvaluationCheckpointStore;
 }
 
 const defaultDependencies: NormalizerPilotDependencies = Object.freeze({
   prepare: prepareNormalizerPilot,
   createCompiler: createNormalizerPilotCompiler,
-  evaluate: evaluateIntentNormalizer,
-  reserveArtifact: reservePrivateArtifact,
+  evaluate: runIntentNormalizerEvaluation,
+  openRunStore: openPrivateRunStore,
+  createCheckpointStore: createNormalizerPilotCheckpointStore,
 });
 
 export function createNormalizerPilotCompiler(
@@ -136,53 +162,156 @@ export function prepareNormalizerPilot(
 export async function executeNormalizerPilot(input: {
   readonly config: NormalizerPilotConfig;
   readonly source: Uint8Array | string;
-  readonly outputPath: string;
+  readonly runDirectory: string;
+  readonly limit?: number;
   readonly environment: Readonly<Record<string, string | undefined>>;
   readonly dependencies?: Partial<NormalizerPilotDependencies>;
-}): Promise<NormalizerPilotArtifact> {
-  assertNormalizerPilotExecutionReady(input.config);
-  const dependencies: NormalizerPilotDependencies = {
-    prepare: input.dependencies?.prepare ?? defaultDependencies.prepare,
-    createCompiler:
-      input.dependencies?.createCompiler ?? defaultDependencies.createCompiler,
-    evaluate: input.dependencies?.evaluate ?? defaultDependencies.evaluate,
-    reserveArtifact:
-      input.dependencies?.reserveArtifact ??
-      defaultDependencies.reserveArtifact,
-  };
-  const preparation = dependencies.prepare(input.config, input.source);
-  const reservation = await dependencies.reserveArtifact(
-    input.outputPath,
-    input.config.evaluation.maxArtifactBytes,
-  );
-  try {
-    const compiler = dependencies.createCompiler({
-      registrySource: preparation.prepared.registrySource,
-      config: compilerConfig(input.config),
-      environment: input.environment,
-    });
-    const evaluation = await dependencies.evaluate({
-      compiler,
-      registry: preparation.registry,
-      fixture: preparation.fixture,
-      split: "held-out",
-      attempts: input.config.evaluation.attemptsPerCase,
-    });
-    const artifact = createArtifact(
-      input.config,
-      preparation,
-      compiler,
-      evaluation,
+}): Promise<NormalizerPilotExecutionResult> {
+  const limit = input.limit;
+  const runDirectory = input.runDirectory;
+  const source = input.source;
+  const dependencyOverrides = input.dependencies;
+  const environmentInput = input.environment;
+  const config = parseNormalizerPilotConfig(input.config);
+  const environment = snapshotCompilerEnvironment(config, environmentInput);
+  assertNormalizerPilotExecutionReady(config);
+  if (limit !== undefined && (!Number.isSafeInteger(limit) || limit < 0)) {
+    throw new TypeError(
+      "Normalizer pilot limit must be a non-negative integer",
     );
-    await reservation.commit(
-      new TextEncoder().encode(`${JSON.stringify(artifact)}\n`),
-    );
-    return artifact;
-  } catch (error) {
-    await reservation.abort();
-    throw error;
   }
+  const dependencies: NormalizerPilotDependencies = {
+    prepare: dependencyOverrides?.prepare ?? defaultDependencies.prepare,
+    createCompiler:
+      dependencyOverrides?.createCompiler ?? defaultDependencies.createCompiler,
+    evaluate: dependencyOverrides?.evaluate ?? defaultDependencies.evaluate,
+    openRunStore:
+      dependencyOverrides?.openRunStore ?? defaultDependencies.openRunStore,
+    createCheckpointStore:
+      dependencyOverrides?.createCheckpointStore ??
+      defaultDependencies.createCheckpointStore,
+  };
+  const preparation = dependencies.prepare(config, source);
+  const compiler = dependencies.createCompiler({
+    registrySource: preparation.prepared.registrySource,
+    config: compilerConfig(config),
+    environment,
+  });
+  const manifest = snapshotCompilerManifest(compiler.manifest);
+  const pilotRunBindingDigest = normalizerPilotRunBindingDigest(
+    config,
+    preparation,
+    manifest,
+  );
+  const store = await dependencies.openRunStore({
+    path: runDirectory,
+    partitions: ["claims", "checkpoints"],
+  });
+  await store.root.publishOrVerify(
+    NORMALIZER_PILOT_RUN_BINDING_NAME,
+    serialize({
+      schema: NORMALIZER_PILOT_RUN_BINDING_SCHEMA,
+      classification: NORMALIZER_PILOT_CLASSIFICATION,
+      mode: "shadow",
+      activeCacheQualified: false,
+      activationAuthorized: false,
+      pilotRunBindingDigest,
+    }),
+    config.evaluation.maxCheckpointBytes,
+  );
+  const checkpointStore = dependencies.createCheckpointStore({
+    store,
+    maximumBytes: config.evaluation.maxCheckpointBytes,
+  });
+  const evaluation = await dependencies.evaluate({
+    compiler,
+    registry: preparation.registry,
+    fixture: preparation.fixture,
+    split: "held-out",
+    attempts: config.evaluation.attemptsPerCase,
+    checkpointStore,
+    checkpointBindingDigest: pilotRunBindingDigest,
+    ...(limit === undefined ? {} : { maxNewObservations: limit }),
+  });
+  assertEvaluationProgress(preparation, evaluation.progress, limit);
+  if (evaluation.status !== "complete") {
+    await store.assertStable();
+    return evaluation.status === "indeterminate"
+      ? Object.freeze({
+          status: "indeterminate" as const,
+          progress: evaluation.progress,
+          checkpointRef: evaluation.checkpointRef,
+        })
+      : Object.freeze({
+          status: "incomplete" as const,
+          progress: evaluation.progress,
+        });
+  }
+  const artifact = createArtifact(
+    config,
+    preparation,
+    manifest,
+    pilotRunBindingDigest,
+    evaluation.progress,
+    evaluation.report,
+  );
+  await store.root.publishOrVerify(
+    NORMALIZER_PILOT_ARTIFACT_NAME,
+    serialize(artifact),
+    config.evaluation.maxArtifactBytes,
+  );
+  await store.assertStable();
+  return Object.freeze({
+    status: "complete" as const,
+    progress: evaluation.progress,
+    artifact,
+  });
 }
+
+function snapshotCompilerEnvironment(
+  config: NormalizerPilotConfig,
+  environment: Readonly<Record<string, string | undefined>>,
+): Readonly<Record<string, string | undefined>> {
+  if (environment === null || typeof environment !== "object") {
+    throw new TypeError("Normalizer pilot environment is invalid");
+  }
+  const reference = config.compiler.provider.environmentRef;
+  if (reference === undefined) return Object.freeze(Object.create(null));
+  const descriptor = Object.getOwnPropertyDescriptor(environment, reference);
+  if (
+    descriptor !== undefined &&
+    (!("value" in descriptor) ||
+      (descriptor.value !== undefined && typeof descriptor.value !== "string"))
+  ) {
+    throw new TypeError("Normalizer pilot environment is invalid");
+  }
+  const snapshot: Record<string, string | undefined> = Object.create(
+    null,
+  ) as Record<string, string | undefined>;
+  Object.defineProperty(snapshot, reference, {
+    value: descriptor?.value as string | undefined,
+    enumerable: true,
+    configurable: false,
+    writable: false,
+  });
+  return Object.freeze(snapshot);
+}
+
+export type NormalizerPilotExecutionResult =
+  | Readonly<{
+      status: "incomplete";
+      progress: IntentEvaluationProgress;
+    }>
+  | Readonly<{
+      status: "indeterminate";
+      progress: IntentEvaluationProgress;
+      checkpointRef: `sha256:${string}`;
+    }>
+  | Readonly<{
+      status: "complete";
+      progress: IntentEvaluationProgress;
+      artifact: NormalizerPilotArtifact;
+    }>;
 
 function compilerConfig(
   config: NormalizerPilotConfig,
@@ -203,19 +332,26 @@ function compilerConfig(
 function createArtifact(
   config: NormalizerPilotConfig,
   preparation: NormalizerPilotPreparation,
-  compiler: IntentProposalCompiler,
+  manifest: IntentProposalCompiler["manifest"],
+  pilotRunBindingDigest: `sha256:${string}`,
+  progress: IntentEvaluationProgress,
   evaluation: IntentEvaluationReport,
 ): NormalizerPilotArtifact {
   const prepared = preparation.prepared;
   if (evaluation.corpusDigest !== prepared.corpusDigest) {
     throw new TypeError("Normalizer evaluation is not bound to the corpus");
   }
-  const manifest = snapshotCompilerManifest(compiler.manifest);
-  const pilotRunBindingDigest = normalizerPilotRunBindingDigest(
-    config,
-    preparation,
-    manifest,
-  );
+  if (
+    evaluation.mode !== "shadow" ||
+    evaluation.activeCacheQualified !== false ||
+    evaluation.split !== "held-out" ||
+    evaluation.attemptsPerCase !== config.evaluation.attemptsPerCase ||
+    evaluation.caseMetrics.total !== prepared.cases ||
+    progress.completedObservations !== progress.totalObservations ||
+    progress.remainingObservations !== 0
+  ) {
+    throw new TypeError("Normalizer evaluation result is not bound");
+  }
   return Object.freeze({
     schema: NORMALIZER_PILOT_ARTIFACT_SCHEMA,
     classification: NORMALIZER_PILOT_CLASSIFICATION,
@@ -225,6 +361,13 @@ function createArtifact(
     promotionManifest: "not-produced" as const,
     qualificationStatus: "external-evidence-required" as const,
     pilotRunBindingDigest,
+    checkpointLineage: Object.freeze({
+      protocol: "semwitness.intent-evaluation-checkpoint/v1" as const,
+      semwitnessRevision: NORMALIZER_PILOT_SEMWITNESS_REVISION,
+      evaluationBindingDigest: progress.evaluationBindingDigest,
+      completedObservations: progress.completedObservations,
+      totalObservations: progress.totalObservations,
+    }),
     source: Object.freeze({
       kind: "clinc150" as const,
       revision: config.source.revision,
@@ -244,10 +387,36 @@ function createArtifact(
       deploymentRevisionDigest: config.compiler
         .deploymentRevisionDigest as `sha256:${string}`,
       credentialKeyId: config.compiler.credentialKeyId,
-      manifest,
+      manifest: snapshotCompilerManifest(manifest),
     }),
     evaluation,
   });
+}
+
+function assertEvaluationProgress(
+  preparation: NormalizerPilotPreparation,
+  progress: IntentEvaluationProgress,
+  limit?: number,
+): void {
+  const counters = [
+    progress.totalObservations,
+    progress.completedObservations,
+    progress.resumedObservations,
+    progress.observedThisRun,
+    progress.remainingObservations,
+  ];
+  if (
+    !/^sha256:[a-f0-9]{64}$/u.test(progress.evaluationBindingDigest) ||
+    counters.some((value) => !Number.isSafeInteger(value) || value < 0) ||
+    progress.totalObservations !== preparation.plannedRequests ||
+    progress.completedObservations + progress.remainingObservations !==
+      progress.totalObservations ||
+    progress.resumedObservations + progress.observedThisRun !==
+      progress.completedObservations ||
+    (limit !== undefined && progress.observedThisRun > limit)
+  ) {
+    throw new TypeError("Normalizer evaluation progress is not bound");
+  }
 }
 
 export function normalizerPilotRunBindingDigest(
@@ -258,7 +427,7 @@ export function normalizerPilotRunBindingDigest(
   const prepared = preparation.prepared;
   const manifest = snapshotCompilerManifest(manifestInput);
   const binding = JSON.stringify({
-    schema: "io.github.aantenore.intentabi/normalizer-pilot-run-binding/v1",
+    schema: NORMALIZER_PILOT_RUN_BINDING_SCHEMA,
     source: {
       revision: config.source.revision,
       sourceDigest: prepared.sourceDigest,
@@ -276,7 +445,8 @@ export function normalizerPilotRunBindingDigest(
       credentialKeyId: config.compiler.credentialKeyId,
     },
     evaluation: {
-      evaluator: "semwitness.evaluateIntentNormalizer",
+      evaluator: "semwitness.runIntentNormalizerEvaluation",
+      checkpointProtocol: "semwitness.intent-evaluation-checkpoint/v1",
       semwitnessRevision: NORMALIZER_PILOT_SEMWITNESS_REVISION,
       split: "held-out",
       attemptsPerCase: config.evaluation.attemptsPerCase,
@@ -284,6 +454,10 @@ export function normalizerPilotRunBindingDigest(
     },
   });
   return `sha256:${createHash("sha256").update(binding, "utf8").digest("hex")}`;
+}
+
+function serialize(value: unknown): Uint8Array {
+  return new TextEncoder().encode(`${JSON.stringify(value)}\n`);
 }
 
 export function normalizerPilotExecutionReady(

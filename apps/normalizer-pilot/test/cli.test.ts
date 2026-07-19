@@ -8,6 +8,7 @@ import { runNormalizerPilotCli } from "../src/cli.js";
 import { EXAMPLE_DEPLOYMENT_REVISION_DIGEST } from "../src/config.js";
 import {
   compiler,
+  digest,
   fixturePreparation,
   pilotArtifact,
   pilotConfig,
@@ -59,10 +60,7 @@ describe("normalizer pilot CLI", () => {
       reason: "INTENT_NO_MATCH" as const,
     }));
     const selectedCompiler = compiler();
-    const createCompiler = vi.fn(() => ({
-      ...selectedCompiler,
-      compile,
-    }));
+    const createCompiler = vi.fn(() => ({ ...selectedCompiler, compile }));
 
     const code = await runNormalizerPilotCli(
       ["validate", "--config", configPath, "--source", sourcePath],
@@ -101,8 +99,8 @@ describe("normalizer pilot CLI", () => {
         configPath,
         "--source",
         sourcePath,
-        "--out",
-        "report.json",
+        "--run-dir",
+        "pilot-run",
         "--execute",
       ],
       {},
@@ -113,6 +111,34 @@ describe("normalizer pilot CLI", () => {
     expect(code).toBe(1);
     expect(execute).not.toHaveBeenCalled();
     expect(captured.stderr.join("")).toContain("explicit --allow-network");
+  });
+
+  it("rejects invalid limits before execution", async () => {
+    const { configPath, sourcePath } = await inputs();
+    for (const limit of ["-1", "1.5", "01", "9007199254740992"]) {
+      const captured = captureIo();
+      const execute = vi.fn();
+      const code = await runNormalizerPilotCli(
+        [
+          "run",
+          "--config",
+          configPath,
+          "--source",
+          sourcePath,
+          "--run-dir",
+          "pilot-run",
+          "--limit",
+          limit,
+          "--execute",
+          "--allow-network",
+        ],
+        {},
+        captured.io,
+        { execute },
+      );
+      expect(code).toBe(1);
+      expect(execute).not.toHaveBeenCalled();
+    }
   });
 
   it("explains why the checked-in deployment placeholder cannot run", async () => {
@@ -138,8 +164,8 @@ describe("normalizer pilot CLI", () => {
         configPath,
         "--source",
         sourcePath,
-        "--out",
-        join(directory, "report.json"),
+        "--run-dir",
+        join(directory, "run"),
         "--execute",
         "--allow-network",
       ],
@@ -155,14 +181,17 @@ describe("normalizer pilot CLI", () => {
     );
   });
 
-  it("returns distinct success and valid-gate-failure exit codes", async () => {
+  it("reports resumable progress without claiming a final artifact", async () => {
     const { directory, configPath, sourcePath } = await inputs();
-    for (const [passed, expectedCode] of [
-      [true, 0],
-      [false, 2],
-    ] as const) {
+    for (const status of ["incomplete", "indeterminate"] as const) {
       const captured = captureIo();
-      const execute = vi.fn(async () => pilotArtifact(passed));
+      const execute = vi.fn(async () => ({
+        status,
+        progress: progress(2, 6),
+        ...(status === "indeterminate"
+          ? { checkpointRef: digest("unknown-outcome") }
+          : {}),
+      }));
       const code = await runNormalizerPilotCli(
         [
           "run",
@@ -170,8 +199,63 @@ describe("normalizer pilot CLI", () => {
           configPath,
           "--source",
           sourcePath,
-          "--out",
-          join(directory, `report-${String(passed)}.json`),
+          "--run-dir",
+          join(directory, `run-${status}`),
+          "--limit",
+          "2",
+          "--execute",
+          "--allow-network",
+        ],
+        {},
+        captured.io,
+        { execute },
+      );
+
+      expect(code).toBe(status === "incomplete" ? 0 : 1);
+      expect(execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runDirectory: join(directory, `run-${status}`),
+          limit: 2,
+        }),
+      );
+      const event = JSON.parse(
+        (status === "incomplete" ? captured.stdout : captured.stderr).join(""),
+      ) as Record<string, unknown>;
+      expect(event).toMatchObject({
+        event: `intentabi.normalizer-pilot.${status}`,
+        status,
+        completedObservations: 2,
+        remainingObservations: 4,
+        artifact: "not-published",
+        statisticalQualification: false,
+        activationAuthorized: false,
+      });
+    }
+  });
+
+  it("returns distinct success and valid-gate-failure exit codes", async () => {
+    const { directory, configPath, sourcePath } = await inputs();
+    for (const [passed, expectedCode] of [
+      [true, 0],
+      [false, 2],
+    ] as const) {
+      const captured = captureIo();
+      const execute = vi.fn(async () => ({
+        status: "complete" as const,
+        progress: progress(6, 6),
+        artifact: pilotArtifact(passed),
+      }));
+      const code = await runNormalizerPilotCli(
+        [
+          "run",
+          "--config",
+          configPath,
+          "--source",
+          sourcePath,
+          "--run-dir",
+          join(directory, `run-${String(passed)}`),
+          "--limit",
+          "0",
           "--execute",
           "--allow-network",
         ],
@@ -198,3 +282,14 @@ describe("normalizer pilot CLI", () => {
     }
   });
 });
+
+function progress(completed: number, total: number) {
+  return Object.freeze({
+    evaluationBindingDigest: digest("evaluation-binding"),
+    totalObservations: total,
+    completedObservations: completed,
+    resumedObservations: 0,
+    observedThisRun: completed,
+    remainingObservations: total - completed,
+  });
+}

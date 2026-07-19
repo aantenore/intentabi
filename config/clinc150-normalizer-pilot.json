@@ -1,5 +1,5 @@
 {
-  "schema": "io.github.aantenore.intentabi/normalizer-pilot-config/v1alpha1",
+  "schema": "io.github.aantenore.intentabi/normalizer-pilot-config/v1alpha2",
   "classification": "external-normalizer-diagnostic",
   "source": {
     "kind": "clinc150",
@@ -44,6 +44,7 @@
   "evaluation": {
     "attemptsPerCase": 2,
     "maxRequests": 256,
-    "maxArtifactBytes": 16777216
+    "maxArtifactBytes": 16777216,
+    "maxCheckpointBytes": 65536
   }
 }

@@ -12,6 +12,7 @@ import {
   prepareNormalizerPilot,
   type NormalizerPilotArtifact,
   type NormalizerPilotDependencies,
+  type NormalizerPilotExecutionResult,
 } from "./pilot.js";
 
 const MAX_CONFIG_BYTES = 1024 * 1024;
@@ -26,10 +27,11 @@ export interface NormalizerPilotCliDependencies {
   execute(input: {
     readonly config: ReturnType<typeof parseNormalizerPilotConfig>;
     readonly source: Uint8Array;
-    readonly outputPath: string;
+    readonly runDirectory: string;
+    readonly limit?: number;
     readonly environment: Readonly<Record<string, string | undefined>>;
     readonly dependencies?: Partial<NormalizerPilotDependencies>;
-  }): Promise<NormalizerPilotArtifact>;
+  }): Promise<NormalizerPilotExecutionResult>;
   prepare?: typeof prepareNormalizerPilot;
   createCompiler?: typeof createNormalizerPilotCompiler;
   pilotDependencies?: Partial<NormalizerPilotDependencies>;
@@ -132,17 +134,33 @@ export async function runNormalizerPilotCli(
         ? {}
         : { pilotDependencies: overrides.pilotDependencies }),
     };
-    const artifact = await dependencies.execute({
+    const result = await dependencies.execute({
       config,
       source,
-      outputPath: resolve(arguments_.outputPath),
+      runDirectory: resolve(arguments_.runDirectory),
+      ...(arguments_.limit === undefined ? {} : { limit: arguments_.limit }),
       environment,
       ...(dependencies.pilotDependencies === undefined
         ? {}
         : { dependencies: dependencies.pilotDependencies }),
     });
-    io.stdout(`${JSON.stringify(completedEvent(artifact))}\n`);
-    return artifact.evaluation.gate.passed ? 0 : 2;
+    if (result.status === "incomplete") {
+      io.stdout(
+        `${JSON.stringify(progressEvent("incomplete", result.progress))}\n`,
+      );
+      return 0;
+    }
+    if (result.status === "indeterminate") {
+      io.stderr(
+        `${JSON.stringify({
+          ...progressEvent("indeterminate", result.progress),
+          checkpointRef: result.checkpointRef,
+        })}\n`,
+      );
+      return 1;
+    }
+    io.stdout(`${JSON.stringify(completedEvent(result.artifact))}\n`);
+    return result.artifact.evaluation.gate.passed ? 0 : 2;
   } catch (error) {
     io.stderr(
       `${JSON.stringify({
@@ -167,7 +185,8 @@ type ParsedArguments =
       command: "run";
       configPath: string;
       sourcePath: string;
-      outputPath: string;
+      runDirectory: string;
+      limit?: number;
     }>;
 
 function parseArguments(argv: readonly string[]): ParsedArguments {
@@ -191,7 +210,12 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
       if (token === "--allow-network") allowNetwork = true;
       continue;
     }
-    if (token !== "--config" && token !== "--source" && token !== "--out") {
+    if (
+      token !== "--config" &&
+      token !== "--source" &&
+      token !== "--run-dir" &&
+      token !== "--limit"
+    ) {
       throw new NormalizerPilotCliError(normalizerPilotUsage());
     }
     const value = argv[index + 1];
@@ -207,18 +231,42 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
     throw new NormalizerPilotCliError(normalizerPilotUsage());
   }
   if (command === "validate") {
-    if (execute || allowNetwork || values.has("--out")) {
+    if (
+      execute ||
+      allowNetwork ||
+      values.has("--run-dir") ||
+      values.has("--limit")
+    ) {
       throw new NormalizerPilotCliError(normalizerPilotUsage());
     }
     return { command, configPath, sourcePath };
   }
-  const outputPath = values.get("--out");
-  if (outputPath === undefined || !execute || !allowNetwork) {
+  const runDirectory = values.get("--run-dir");
+  if (runDirectory === undefined || !execute || !allowNetwork) {
     throw new NormalizerPilotCliError(
-      "Run requires --out, --execute, and explicit --allow-network",
+      "Run requires --run-dir, --execute, and explicit --allow-network",
     );
   }
-  return { command, configPath, sourcePath, outputPath };
+  const rawLimit = values.get("--limit");
+  const limit = rawLimit === undefined ? undefined : parseLimit(rawLimit);
+  return {
+    command,
+    configPath,
+    sourcePath,
+    runDirectory,
+    ...(limit === undefined ? {} : { limit }),
+  };
+}
+
+function parseLimit(value: string): number {
+  if (!/^(?:0|[1-9][0-9]*)$/u.test(value)) {
+    throw new NormalizerPilotCliError(normalizerPilotUsage());
+  }
+  const limit = Number(value);
+  if (!Number.isSafeInteger(limit)) {
+    throw new NormalizerPilotCliError(normalizerPilotUsage());
+  }
+  return limit;
 }
 
 function completedEvent(artifact: NormalizerPilotArtifact) {
@@ -249,6 +297,27 @@ function completedEvent(artifact: NormalizerPilotArtifact) {
   });
 }
 
+function progressEvent(
+  status: "incomplete" | "indeterminate",
+  progress: NormalizerPilotExecutionResult["progress"],
+) {
+  return Object.freeze({
+    event: `intentabi.normalizer-pilot.${status}`,
+    classification: "external-normalizer-diagnostic",
+    status,
+    evaluationBindingDigest: progress.evaluationBindingDigest,
+    totalObservations: progress.totalObservations,
+    completedObservations: progress.completedObservations,
+    observedThisRun: progress.observedThisRun,
+    resumedObservations: progress.resumedObservations,
+    remainingObservations: progress.remainingObservations,
+    statisticalQualification: false,
+    economicQualification: false,
+    activationAuthorized: false,
+    artifact: "not-published",
+  });
+}
+
 async function readJson(path: string | URL, maximumBytes: number) {
   try {
     const bytes =
@@ -273,7 +342,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function normalizerPilotUsage(): string {
   return [
     "Usage: intentabi-normalizer-pilot validate --config <path> --source <path>",
-    "       intentabi-normalizer-pilot run --config <path> --source <path> --out <path> --execute --allow-network",
+    "       intentabi-normalizer-pilot run --config <path> --source <path> --run-dir <path> [--limit <new-observations>] --execute --allow-network",
   ].join("\n");
 }
 

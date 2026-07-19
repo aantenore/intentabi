@@ -42,6 +42,7 @@ const valid = {
     attemptsPerCase: 3,
     maxRequests: 1_000,
     maxArtifactBytes: 4_194_304,
+    maxCheckpointBytes: 65_536,
   },
 } as const;
 

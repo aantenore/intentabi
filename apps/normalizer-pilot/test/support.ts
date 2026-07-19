@@ -15,9 +15,10 @@ import {
   NORMALIZER_PILOT_CONFIG_SCHEMA,
   parseNormalizerPilotConfig,
 } from "../src/config.js";
-import type {
-  NormalizerPilotArtifact,
-  NormalizerPilotPreparation,
+import {
+  NORMALIZER_PILOT_SEMWITNESS_REVISION,
+  type NormalizerPilotArtifact,
+  type NormalizerPilotPreparation,
 } from "../src/pilot.js";
 
 const registrySource = readFileSync(
@@ -114,6 +115,7 @@ export function pilotConfig() {
       attemptsPerCase: 3,
       maxRequests: 1_000,
       maxArtifactBytes: 4_194_304,
+      maxCheckpointBytes: 65_536,
     },
   });
 }
@@ -190,7 +192,7 @@ export function evaluationReport(
 export function pilotArtifact(passed = true): NormalizerPilotArtifact {
   const preparation = fixturePreparation();
   return Object.freeze({
-    schema: "io.github.aantenore.intentabi/normalizer-pilot-artifact/v1alpha1",
+    schema: "io.github.aantenore.intentabi/normalizer-pilot-artifact/v1alpha2",
     classification: NORMALIZER_PILOT_CLASSIFICATION,
     statisticalQualification: false,
     economicQualification: false,
@@ -198,6 +200,13 @@ export function pilotArtifact(passed = true): NormalizerPilotArtifact {
     promotionManifest: "not-produced",
     qualificationStatus: "external-evidence-required",
     pilotRunBindingDigest: digest("pilot-run-binding"),
+    checkpointLineage: Object.freeze({
+      protocol: "semwitness.intent-evaluation-checkpoint/v1",
+      semwitnessRevision: NORMALIZER_PILOT_SEMWITNESS_REVISION,
+      evaluationBindingDigest: digest("evaluation-binding"),
+      completedObservations: 6,
+      totalObservations: 6,
+    }),
     source: Object.freeze({
       kind: "clinc150",
       revision: CLINC150_REVISION,

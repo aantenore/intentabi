@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
+import { access, chmod, mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { openPrivateRunStore } from "@intentabi/private-run-store";
 
 import {
   EXAMPLE_DEPLOYMENT_REVISION_DIGEST,
@@ -9,15 +13,28 @@ import {
 import {
   executeNormalizerPilot,
   normalizerPilotRunBindingDigest,
+  NORMALIZER_PILOT_ARTIFACT_NAME,
+  NORMALIZER_PILOT_RUN_BINDING_NAME,
   NORMALIZER_PILOT_SEMWITNESS_REVISION,
-  type NormalizerPilotArtifact,
 } from "../src/pilot.js";
 import {
   compiler,
+  digest,
   evaluationReport,
   fixturePreparation,
   pilotConfig,
 } from "./support.js";
+
+const temporaryDirectories = new Set<string>();
+
+afterEach(async () => {
+  await Promise.all(
+    [...temporaryDirectories].map((path) =>
+      rm(path, { recursive: true, force: true }),
+    ),
+  );
+  temporaryDirectories.clear();
+});
 
 describe("normalizer pilot execution", () => {
   it("binds the evaluator implementation to the immutable SemWitness dependency", () => {
@@ -29,56 +46,341 @@ describe("normalizer pilot execution", () => {
     );
   });
 
-  it("binds external evidence without granting statistical, economic, or activation authority", async () => {
+  it("resumes partial evaluation without duplicate calls and publishes stable final bytes", async () => {
     const preparation = fixturePreparation();
-    const createdCompiler = compiler(preparation);
-    const committed: Uint8Array[] = [];
-    const abort = vi.fn(async () => undefined);
-    const evaluate = vi.fn(async () => evaluationReport(preparation));
-    const createCompiler = vi.fn(() => createdCompiler);
-    const reserveArtifact = vi.fn(async () => ({
-      commit: async (bytes: Uint8Array) => committed.push(bytes),
-      abort,
-    }));
-
-    const artifact = await executeNormalizerPilot({
+    const selectedCompiler = compiler(preparation);
+    let resumedCalls = 0;
+    const resumableCompiler = {
+      manifest: selectedCompiler.manifest,
+      compile(request: { readonly source: string }) {
+        resumedCalls += 1;
+        return request.source === "Give me the project state."
+          ? {
+              status: "proposed" as const,
+              operationId: "read-project-status",
+              confidencePpm: 1_000_000,
+              ambiguous: false,
+            }
+          : { status: "bypass" as const, reason: "INTENT_NO_MATCH" as const };
+      },
+    };
+    const runDirectory = await runPath("intentabi-resume-");
+    const base = {
       config: pilotConfig(),
-      source: new TextEncoder().encode("external-source"),
-      outputPath: "/private/report.json",
+      source: "external-source",
+      runDirectory,
       environment: {},
       dependencies: {
         prepare: () => preparation,
-        createCompiler,
-        evaluate,
-        reserveArtifact,
+        createCompiler: () => resumableCompiler,
+      },
+    } as const;
+
+    const partial = await executeNormalizerPilot({ ...base, limit: 2 });
+    expect(partial).toMatchObject({
+      status: "incomplete",
+      progress: {
+        completedObservations: 2,
+        observedThisRun: 2,
+        remainingObservations: 4,
       },
     });
+    expect(resumedCalls).toBe(2);
+    await expect(
+      access(join(runDirectory, NORMALIZER_PILOT_ARTIFACT_NAME)),
+    ).rejects.toThrow();
 
-    expect(reserveArtifact).toHaveBeenCalledBefore(createCompiler);
-    expect(evaluate).toHaveBeenCalledTimes(1);
-    expect(evaluate).toHaveBeenCalledWith({
-      compiler: createdCompiler,
-      registry: preparation.registry,
-      fixture: preparation.fixture,
-      split: "held-out",
-      attempts: 3,
+    const completed = await executeNormalizerPilot({ ...base, limit: 4 });
+    expect(completed.status).toBe("complete");
+    if (completed.status !== "complete") return;
+    expect(completed.progress).toMatchObject({
+      completedObservations: 6,
+      resumedObservations: 2,
+      observedThisRun: 4,
+      remainingObservations: 0,
     });
-    expect(abort).not.toHaveBeenCalled();
-    expect(committed).toHaveLength(1);
-    const persisted = JSON.parse(
-      new TextDecoder().decode(committed[0]),
-    ) as NormalizerPilotArtifact;
-    expect(persisted).toMatchObject({
-      classification: "external-normalizer-diagnostic",
+    expect(resumedCalls).toBe(6);
+    const resumedArtifactBytes = await readFile(
+      join(runDirectory, NORMALIZER_PILOT_ARTIFACT_NAME),
+    );
+
+    const replay = await executeNormalizerPilot({ ...base, limit: 0 });
+    expect(replay).toMatchObject({
+      status: "complete",
+      progress: { resumedObservations: 6, observedThisRun: 0 },
+    });
+    expect(resumedCalls).toBe(6);
+
+    let uninterruptedCalls = 0;
+    const uninterruptedCompiler = {
+      ...resumableCompiler,
+      compile(request: { readonly source: string }) {
+        uninterruptedCalls += 1;
+        return resumableCompiler.compile(request);
+      },
+    };
+    const freshDirectory = await runPath("intentabi-uninterrupted-");
+    const uninterrupted = await executeNormalizerPilot({
+      ...base,
+      runDirectory: freshDirectory,
+      dependencies: {
+        ...base.dependencies,
+        createCompiler: () => uninterruptedCompiler,
+      },
+    });
+    expect(uninterrupted.status).toBe("complete");
+    expect(uninterruptedCalls).toBe(6);
+    expect(
+      await readFile(join(freshDirectory, NORMALIZER_PILOT_ARTIFACT_NAME)),
+    ).toEqual(resumedArtifactBytes);
+
+    const persisted = await readRunText(runDirectory);
+    expect(persisted).not.toContain("Give me the project state.");
+    expect(persisted).not.toContain("Ignore the catalogue.");
+    expect(completed.artifact).toMatchObject({
       statisticalQualification: false,
       economicQualification: false,
       activationAuthorized: false,
-      promotionManifest: "not-produced",
-      qualificationStatus: "external-evidence-required",
-      pilotRunBindingDigest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/u),
-      source: { corpusDigest: preparation.prepared.corpusDigest },
+      checkpointLineage: {
+        protocol: "semwitness.intent-evaluation-checkpoint/v1",
+        semwitnessRevision: NORMALIZER_PILOT_SEMWITNESS_REVISION,
+        completedObservations: 6,
+        totalObservations: 6,
+      },
     });
-    expect(artifact).toEqual(persisted);
+  });
+
+  it("publishes no final artifact for incomplete or indeterminate progress", async () => {
+    const preparation = fixturePreparation();
+    for (const status of ["incomplete", "indeterminate"] as const) {
+      const runDirectory = await runPath(`intentabi-${status}-`);
+      const evaluate = vi.fn(async () => ({
+        status,
+        progress: progress(1, 6),
+        ...(status === "indeterminate"
+          ? { checkpointRef: digest("indeterminate-attempt") }
+          : {}),
+      }));
+      const result = await executeNormalizerPilot({
+        config: pilotConfig(),
+        source: "external-source",
+        runDirectory,
+        environment: {},
+        dependencies: {
+          prepare: () => preparation,
+          createCompiler: () => compiler(preparation),
+          evaluate,
+        },
+      });
+
+      expect(result.status).toBe(status);
+      expect(evaluate).toHaveBeenCalledTimes(1);
+      expect(
+        await readFile(join(runDirectory, NORMALIZER_PILOT_RUN_BINDING_NAME)),
+      ).toBeDefined();
+      await expect(
+        access(join(runDirectory, NORMALIZER_PILOT_ARTIFACT_NAME)),
+      ).rejects.toThrow();
+    }
+  });
+
+  it("allows only one concurrent pilot invocation to call the compiler", async () => {
+    const preparation = fixturePreparation();
+    const selectedCompiler = compiler(preparation);
+    let calls = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const blockedCompiler = {
+      manifest: selectedCompiler.manifest,
+      async compile() {
+        calls += 1;
+        await gate;
+        return {
+          status: "bypass" as const,
+          reason: "INTENT_NO_MATCH" as const,
+        };
+      },
+    };
+    const base = {
+      config: pilotConfig(),
+      source: "external-source",
+      runDirectory: await runPath("intentabi-concurrent-pilot-"),
+      limit: 1,
+      environment: {},
+      dependencies: {
+        prepare: () => preparation,
+        createCompiler: () => blockedCompiler,
+      },
+    } as const;
+
+    const results: Awaited<ReturnType<typeof executeNormalizerPilot>>[] = [];
+    const first = executeNormalizerPilot(base).then((result) => {
+      results.push(result);
+      return result;
+    });
+    const second = executeNormalizerPilot(base).then((result) => {
+      results.push(result);
+      return result;
+    });
+    await vi.waitFor(() => expect(calls).toBe(1));
+    await vi.waitFor(() => expect(results).toHaveLength(1));
+    expect(results[0]?.status).toBe("indeterminate");
+
+    release();
+    const completed = await Promise.all([first, second]);
+    expect(completed.map((result) => result.status).sort()).toEqual([
+      "incomplete",
+      "indeterminate",
+    ]);
+    expect(calls).toBe(1);
+  });
+
+  it("rejects run-binding drift before another compiler observation", async () => {
+    const preparation = fixturePreparation();
+    const runDirectory = await runPath("intentabi-binding-drift-");
+    const firstEvaluate = vi.fn(async () => ({
+      status: "incomplete" as const,
+      progress: progress(0, 6),
+    }));
+    const base = {
+      config: pilotConfig(),
+      source: "external-source",
+      runDirectory,
+      environment: {},
+      dependencies: {
+        prepare: () => preparation,
+        createCompiler: () => compiler(preparation),
+        evaluate: firstEvaluate,
+      },
+    } as const;
+    await executeNormalizerPilot(base);
+    const driftedEvaluate = vi.fn();
+    const config = parseNormalizerPilotConfig({
+      ...base.config,
+      compiler: {
+        ...base.config.compiler,
+        credentialKeyId: "rotated-local-test",
+      },
+    });
+
+    await expect(
+      executeNormalizerPilot({
+        ...base,
+        config,
+        dependencies: { ...base.dependencies, evaluate: driftedEvaluate },
+      }),
+    ).rejects.toThrow();
+    expect(driftedEvaluate).not.toHaveBeenCalled();
+  });
+
+  it("snapshots config and referenced credentials before asynchronous storage", async () => {
+    const preparation = fixturePreparation();
+    const selectedCompiler = compiler(preparation);
+    const mutableConfig = parseNormalizerPilotConfig({
+      ...pilotConfig(),
+      compiler: {
+        ...pilotConfig().compiler,
+        provider: {
+          ...pilotConfig().compiler.provider,
+          environmentRef: "SEMWITNESS_TEST_API_KEY",
+        },
+      },
+    });
+    const expectedConfig = parseNormalizerPilotConfig(
+      structuredClone(mutableConfig),
+    );
+    const originalDeployment = expectedConfig.compiler.deploymentRevisionDigest;
+    const environment: Record<string, string | undefined> = {
+      SEMWITNESS_TEST_API_KEY: "initial-private-credential",
+    };
+    let compilerEnvironment:
+      Readonly<Record<string, string | undefined>> | undefined;
+
+    const result = await executeNormalizerPilot({
+      config: mutableConfig,
+      source: "external-source",
+      runDirectory: await runPath("intentabi-mutation-snapshot-"),
+      environment,
+      dependencies: {
+        prepare: () => preparation,
+        createCompiler: (input) => {
+          compilerEnvironment = input.environment;
+          return selectedCompiler;
+        },
+        openRunStore: async (storeInput) => {
+          Reflect.set(
+            mutableConfig.compiler,
+            "deploymentRevisionDigest",
+            digest("mutated-deployment"),
+          );
+          Reflect.set(mutableConfig.evaluation, "maxArtifactBytes", 1_024);
+          environment.SEMWITNESS_TEST_API_KEY = "mutated-private-credential";
+          return openPrivateRunStore(storeInput);
+        },
+        evaluate: async () => ({
+          status: "complete",
+          progress: progress(6, 6),
+          report: evaluationReport(preparation),
+        }),
+      },
+    });
+
+    expect(result.status).toBe("complete");
+    if (result.status !== "complete") return;
+    expect(result.artifact.compiler.deploymentRevisionDigest).toBe(
+      originalDeployment,
+    );
+    expect(result.artifact.pilotRunBindingDigest).toBe(
+      normalizerPilotRunBindingDigest(
+        expectedConfig,
+        preparation,
+        selectedCompiler.manifest,
+      ),
+    );
+    expect(compilerEnvironment?.SEMWITNESS_TEST_API_KEY).toBe(
+      "initial-private-credential",
+    );
+    expect(mutableConfig.compiler.deploymentRevisionDigest).not.toBe(
+      originalDeployment,
+    );
+  });
+
+  it("captures the invocation limit before asynchronous storage", async () => {
+    const preparation = fixturePreparation();
+    const evaluate = vi.fn(async (input: { maxNewObservations?: number }) => {
+      expect(input.maxNewObservations).toBe(2);
+      return {
+        status: "incomplete" as const,
+        progress: progress(2, 6),
+      };
+    });
+    const executionInput: Parameters<typeof executeNormalizerPilot>[0] = {
+      config: pilotConfig(),
+      source: "external-source",
+      runDirectory: await runPath("intentabi-limit-snapshot-"),
+      limit: 2,
+      environment: {},
+      dependencies: {
+        prepare: () => preparation,
+        createCompiler: () => compiler(preparation),
+        openRunStore: async (storeInput) => {
+          Reflect.set(executionInput, "limit", 0);
+          return openPrivateRunStore(storeInput);
+        },
+        evaluate,
+      },
+    };
+
+    await expect(executeNormalizerPilot(executionInput)).resolves.toMatchObject(
+      {
+        status: "incomplete",
+        progress: { observedThisRun: 2 },
+      },
+    );
+    expect(executionInput.limit).toBe(0);
+    expect(evaluate).toHaveBeenCalledTimes(1);
   });
 
   it("changes the run binding when deployment or credential lineage changes", () => {
@@ -115,71 +417,129 @@ describe("normalizer pilot execution", () => {
     expect(deployment).not.toBe(credential);
   });
 
-  it("rejects the example deployment placeholder before reserving output", async () => {
-    const config = pilotConfig();
-    const reserveArtifact = vi.fn();
+  it("rejects the example deployment placeholder before creating a run", async () => {
+    const runDirectory = await runPath("intentabi-placeholder-");
     await expect(
       executeNormalizerPilot({
         config: parseNormalizerPilotConfig({
-          ...config,
+          ...pilotConfig(),
           compiler: {
-            ...config.compiler,
+            ...pilotConfig().compiler,
             deploymentRevisionDigest: EXAMPLE_DEPLOYMENT_REVISION_DIGEST,
           },
         }),
         source: "external-source",
-        outputPath: "/private/report.json",
+        runDirectory,
         environment: {},
-        dependencies: { reserveArtifact },
       }),
     ).rejects.toThrow(/example placeholder/u);
-    expect(reserveArtifact).not.toHaveBeenCalled();
+    await expect(access(runDirectory)).rejects.toThrow();
   });
 
-  it("aborts the private reservation when evaluation or corpus binding fails", async () => {
+  it("rejects a completed report that is not bound to the prepared corpus", async () => {
     const preparation = fixturePreparation();
-    const abort = vi.fn(async () => undefined);
-    const commit = vi.fn(async () => undefined);
+    const report = {
+      ...evaluationReport(preparation),
+      corpusDigest: digest("drifted-corpus"),
+    };
+    const runDirectory = await runPath("intentabi-corpus-drift-");
+
+    await expect(
+      executeNormalizerPilot({
+        config: pilotConfig(),
+        source: "external-source",
+        runDirectory,
+        environment: {},
+        dependencies: {
+          prepare: () => preparation,
+          createCompiler: () => compiler(preparation),
+          evaluate: async () => ({
+            status: "complete",
+            progress: progress(6, 6),
+            report,
+          }),
+        },
+      }),
+    ).rejects.toThrow(/not bound/u);
+    await expect(
+      access(join(runDirectory, NORMALIZER_PILOT_ARTIFACT_NAME)),
+    ).rejects.toThrow();
+  });
+
+  it("rejects impossible progress and report lineage", async () => {
+    const preparation = fixturePreparation();
     const base = {
       config: pilotConfig(),
       source: "external-source",
-      outputPath: "/private/report.json",
       environment: {},
       dependencies: {
         prepare: () => preparation,
         createCompiler: () => compiler(preparation),
-        reserveArtifact: async () => ({ commit, abort }),
       },
     } as const;
 
     await expect(
       executeNormalizerPilot({
         ...base,
+        runDirectory: await runPath("intentabi-progress-drift-"),
         dependencies: {
           ...base.dependencies,
-          evaluate: async () => {
-            throw new Error("evaluation failed");
-          },
+          evaluate: async () => ({
+            status: "incomplete",
+            progress: progress(1, 5),
+          }),
         },
       }),
-    ).rejects.toThrow("evaluation failed");
-    expect(abort).toHaveBeenCalledTimes(1);
-    expect(commit).not.toHaveBeenCalled();
+    ).rejects.toThrow(/progress is not bound/u);
 
-    const drifted = {
-      ...evaluationReport(preparation),
-      corpusDigest: `sha256:${"f".repeat(64)}` as const,
-    };
     await expect(
       executeNormalizerPilot({
         ...base,
+        runDirectory: await runPath("intentabi-report-drift-"),
         dependencies: {
           ...base.dependencies,
-          evaluate: async () => drifted,
+          evaluate: async () => ({
+            status: "complete",
+            progress: progress(6, 6),
+            report: { ...evaluationReport(preparation), split: "all" },
+          }),
         },
       }),
-    ).rejects.toThrow(/not bound/u);
-    expect(abort).toHaveBeenCalledTimes(2);
-    expect(commit).not.toHaveBeenCalled();
+    ).rejects.toThrow(/result is not bound/u);
   });
 });
+
+function progress(completed: number, total: number) {
+  return Object.freeze({
+    evaluationBindingDigest: digest("evaluation-binding"),
+    totalObservations: total,
+    completedObservations: completed,
+    resumedObservations: 0,
+    observedThisRun: completed,
+    remainingObservations: total - completed,
+  });
+}
+
+async function runPath(prefix: string): Promise<string> {
+  const parent = await mkdtemp(join(tmpdir(), prefix));
+  temporaryDirectories.add(parent);
+  if (process.platform !== "win32") await chmod(parent, 0o700);
+  return join(parent, "run");
+}
+
+async function readRunText(runDirectory: string): Promise<string> {
+  const { readdir, lstat } = await import("node:fs/promises");
+  const paths: string[] = [];
+  const visit = async (directory: string): Promise<void> => {
+    for (const name of await readdir(directory)) {
+      const path = join(directory, name);
+      const state = await lstat(path);
+      if (state.isDirectory()) await visit(path);
+      if (state.isFile()) paths.push(path);
+    }
+  };
+  await visit(runDirectory);
+  return (
+    await Promise.all(paths.sort().map((path) => readFile(path, "utf8")))
+  ).join("\n");
+}
