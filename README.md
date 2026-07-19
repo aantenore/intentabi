@@ -19,14 +19,15 @@ whether measured token usage improved. It never returns the candidate cached val
 IntentABI is for AI platform teams evaluating intent normalization and semantic caching without
 betting production correctness on a similarity threshold.
 
-| Feature                                | Practical benefit                                                                                       |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Shadow-only passthrough                | Teams can study candidate reuse without changing application answers or bypassing the normal route.     |
-| Typed intent and route bindings        | Equivalent wording is not enough; evidence stays tied to the intended operation, scope, and deployment. |
-| Content-free authenticated evidence    | Experiments can be audited without placing prompts, outputs, or cached values in telemetry.             |
-| Raw-versus-normalized cache-impact lab | Teams can see workload-specific safe-hit and token differences instead of relying on a sales claim.     |
-| Counterbalanced qualification runs     | Baseline and candidate paths can be compared in both orders to reduce simple ordering bias.             |
-| Explicit activation boundary           | A positive experiment remains evidence, not permission to serve cached content.                         |
+| Feature                                | Practical benefit                                                                                           |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Shadow-only passthrough                | Teams can study candidate reuse without changing application answers or bypassing the normal route.         |
+| Typed intent and route bindings        | Equivalent wording is not enough; evidence stays tied to the intended operation, scope, and deployment.     |
+| Content-free authenticated evidence    | Experiments can be audited without placing prompts, outputs, or cached values in telemetry.                 |
+| Resumable provider capture             | Interrupted local or remote model measurements continue from atomic per-case records instead of restarting. |
+| Raw-versus-normalized cache-impact lab | Teams can see workload-specific safe-hit and token differences instead of relying on a sales claim.         |
+| Counterbalanced qualification runs     | Baseline and candidate paths can be compared in both orders to reduce simple ordering bias.                 |
+| Explicit activation boundary           | A positive experiment remains evidence, not permission to serve cached content.                             |
 
 > **Maturity:** IntentABI is alpha, source-checkout-only, and shadow-only. It currently evaluates
 > configured equivalences and bounded experiments; it does not prove broad paraphrase recall,
@@ -71,6 +72,15 @@ hit against a host-supplied value digest, and reports safe-hit lift plus net
 input/output token deltas. It remains offline, content-free, and shadow-only.
 The report binds the exact registry bytes and inspector configuration, while
 labeling workload, usage, and freshness provenance as unattested diagnostics.
+
+The separate Diagnostic Provider Capture fills the input gap without adding a
+router or cache: it calls a configured OpenAI-compatible endpoint, compares
+JSON output with a host oracle, persists one private immutable observation per
+case, resumes missing work, and assembles the existing cache-impact workload.
+Its records explicitly deny statistical qualification and activation. Resume
+is bound to host-declared deployment and credential identities, raw token usage
+fails closed before SDK normalization can hide missing fields, and artifact
+budgets are preflighted before the first provider call.
 
 ## Why This Exists
 
@@ -182,6 +192,35 @@ complete report failed a safety or value gate; exit `1` means the boundary or
 execution failed. None of the three authorizes cache activation. See
 [Cache Impact Lab](docs/cache-impact-lab.md) for contracts and metric formulas.
 
+## Capture Provider Measurements
+
+The capture app turns real OpenAI-compatible usage observations into the
+existing cache-impact workload without storing model output or separate
+reasoning in clear. Validate first with zero provider calls:
+
+```bash
+pnpm capture:pilot validate \
+  --config config/diagnostic-capture.ollama.example.json \
+  --dataset fixtures/diagnostic-capture-smoke.json
+```
+
+Then use an empty private run directory and explicit execution consent:
+
+```bash
+pnpm capture:pilot run \
+  --config config/diagnostic-capture.ollama.example.json \
+  --dataset fixtures/diagnostic-capture-smoke.json \
+  --run-dir /absolute/private/path/intentabi-pilot \
+  --execute
+```
+
+Repeat the command to resume. A workload is published only after every case
+matches the host JSON oracle. Change the configured deployment revision or
+credential identity whenever that backend changes, and start a new run
+directory. The bundled fixture is a four-case transport smoke, not statistical
+evidence. See
+[Diagnostic Provider Capture](docs/diagnostic-capture.md).
+
 ## Run the Qualification Lab
 
 `validate` performs schema and budget checks without reading a secret or calling
@@ -254,6 +293,7 @@ packages/cli-io                  bounded reads and atomic private publication
 packages/store-memory            metadata-only development nomination store
 apps/cli                         first Agentic SDLC host composition
 apps/codex-bench                 opt-in Codex SDK research composition
+apps/diagnostic-capture          resumable OpenAI-compatible usage capture
 apps/qualification               offline SemWitness qualification handoff
 ```
 
@@ -267,7 +307,8 @@ Read [architecture](docs/architecture.md),
 [delivery contract](docs/delivery-contract.md),
 [threat model](docs/threat-model.md),
 [landscape](docs/landscape.md),
-[cache-impact lab](docs/cache-impact-lab.md), and
+[cache-impact lab](docs/cache-impact-lab.md),
+[diagnostic provider capture](docs/diagnostic-capture.md), and
 [Codex integration boundary](docs/codex-integration.md) before extending the
 alpha.
 
@@ -276,8 +317,8 @@ alpha.
 No embeddings, vector database, active cache, response reuse, transformed
 Codex submission, transparent composer interception, production multi-tenant
 store, or npm release. The runtime and cache-impact core remain provider-free;
-the separate, double-opt-in Codex benchmark can call a network model provider
-only as a research-conformance diagnostic. The exact-alias fixture proves
+the separate, explicit-execution capture and Codex benchmark apps may call a
+configured model only for diagnostics. The exact-alias fixture proves
 contracts and arithmetic; it is not a claim of universal natural-language
 equivalence.
 

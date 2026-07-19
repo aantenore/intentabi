@@ -1,0 +1,53 @@
+{
+  "schema": "semwitness.dev/intent-operation-registry/v1alpha1",
+  "ontology": {
+    "id": "project-operations",
+    "version": "1.0.0",
+    "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "minimumConfidencePpm": 1000000,
+  "operations": [
+    {
+      "id": "read-project-status",
+      "aliases": [
+        {
+          "locale": "en-US",
+          "text": "Show the current project status."
+        },
+        {
+          "locale": "en-US",
+          "text": "What is the status of this project?"
+        },
+        {
+          "locale": "it-IT",
+          "text": "Mostra lo stato corrente del progetto."
+        }
+      ],
+      "intent": {
+        "schema": "semwitness.dev/intent-ir/v1alpha1",
+        "ontology": {
+          "id": "project-operations",
+          "version": "1.0.0",
+          "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "goal": {
+          "namespace": "project-operations",
+          "action": "read",
+          "object": "project-status",
+          "polarity": "affirm"
+        },
+        "slots": [],
+        "constraints": [],
+        "temporal": {
+          "kind": "none"
+        },
+        "output": {
+          "format": "json",
+          "locale": "en-US",
+          "detail": "summary"
+        },
+        "effect": "read"
+      }
+    }
+  ]
+}

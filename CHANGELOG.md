@@ -5,6 +5,23 @@ source-alpha and follows semantic-versioned prereleases.
 
 ## Unreleased
 
+### Added
+
+- Added a resumable, config-driven OpenAI-compatible capture app that writes
+  atomic per-case observations and deterministically assembles the existing
+  cache-impact workload only after host-oracle matches.
+- Added explicit reasoning-budget failure classification, provider usage and
+  reasoning digests, and machine-readable non-qualification/non-activation
+  labels on every record and manifest.
+
+### Fixed
+
+- Validate raw provider usage before SDK normalization and reject missing,
+  partial, or inconsistent counters instead of recording synthetic zeroes.
+- Bind resumable records to host-owned deployment and credential identities,
+  reject redirected run directories, and preflight every persisted-artifact
+  budget before a provider call.
+
 ## 0.2.0-alpha.2 - 2026-07-17
 
 ### Fixed

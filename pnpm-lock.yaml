@@ -71,6 +71,21 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
 
+  apps/diagnostic-capture:
+    dependencies:
+      "@ai-sdk/openai-compatible":
+        specifier: 3.0.7
+        version: 3.0.7(zod@4.4.3)
+      "@intentabi/cli-io":
+        specifier: workspace:*
+        version: link:../../packages/cli-io
+      ai:
+        specifier: 7.0.22
+        version: 7.0.22(zod@4.4.3)
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
   apps/qualification:
     dependencies:
       "@intentabi/adapter-semwitness":

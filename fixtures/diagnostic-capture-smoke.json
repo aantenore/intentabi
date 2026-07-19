@@ -1,0 +1,60 @@
+{
+  "schema": "io.github.aantenore.intentabi/diagnostic-capture-dataset/v1alpha1",
+  "classification": "diagnostic-held-out-pilot",
+  "split": "held-out",
+  "id": "project-status-provider-smoke-v1",
+  "cases": [
+    {
+      "id": "status-en-1",
+      "source": "Show the current project status.",
+      "locale": "en-US",
+      "routeInput": {
+        "command": "status",
+        "project": "demo"
+      },
+      "oracleValue": {
+        "operation": "read-project-status",
+        "status": "available"
+      }
+    },
+    {
+      "id": "status-en-2",
+      "source": "What is the status of this project?",
+      "locale": "en-US",
+      "routeInput": {
+        "command": "status",
+        "project": "demo"
+      },
+      "oracleValue": {
+        "operation": "read-project-status",
+        "status": "available"
+      }
+    },
+    {
+      "id": "status-it-1",
+      "source": "Mostra lo stato corrente del progetto.",
+      "locale": "it-IT",
+      "routeInput": {
+        "command": "status",
+        "project": "demo"
+      },
+      "oracleValue": {
+        "operation": "read-project-status",
+        "status": "available"
+      }
+    },
+    {
+      "id": "status-en-repeat",
+      "source": "Show the current project status.",
+      "locale": "en-US",
+      "routeInput": {
+        "command": "status",
+        "project": "demo"
+      },
+      "oracleValue": {
+        "operation": "read-project-status",
+        "status": "available"
+      }
+    }
+  ]
+}
