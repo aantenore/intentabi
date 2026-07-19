@@ -33,6 +33,7 @@
     "cache:impact": "tsx apps/cli/src/bin.ts cache-impact evaluate",
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test",
     "codex:bench": "tsx apps/codex-bench/src/bin.ts",
+    "capture:pilot": "tsx apps/diagnostic-capture/src/bin.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "oxlint --deny-warnings apps packages",

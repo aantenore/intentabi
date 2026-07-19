@@ -1,0 +1,52 @@
+{
+  "name": "@intentabi/diagnostic-capture",
+  "version": "0.2.0-alpha.2",
+  "private": true,
+  "description": "Resumable OpenAI-compatible provider capture for IntentABI diagnostic workloads.",
+  "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
+  "homepage": "https://github.com/aantenore/intentabi#readme",
+  "bugs": {
+    "url": "https://github.com/aantenore/intentabi/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aantenore/intentabi.git",
+    "directory": "apps/diagnostic-capture"
+  },
+  "keywords": [
+    "agentic-ai",
+    "diagnostic",
+    "intent-normalization",
+    "llm-evaluation",
+    "openai-compatible"
+  ],
+  "type": "module",
+  "license": "Apache-2.0",
+  "bin": {
+    "intentabi-diagnostic-capture": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json",
+    "prepack": "pnpm run build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "3.0.7",
+    "@intentabi/cli-io": "workspace:*",
+    "ai": "7.0.22",
+    "zod": "4.4.3"
+  }
+}

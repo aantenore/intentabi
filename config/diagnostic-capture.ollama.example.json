@@ -1,0 +1,33 @@
+{
+  "schema": "io.github.aantenore.intentabi/diagnostic-capture-config/v1alpha1",
+  "classification": "diagnostic-held-out-pilot",
+  "provider": {
+    "kind": "openai-compatible-chat-completions",
+    "name": "local-openai-compatible",
+    "baseUrl": "http://127.0.0.1:11434/v1",
+    "model": "qwen3:4b",
+    "deploymentRevisionDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "credentialKeyId": "local-smoke-no-credential",
+    "authentication": {
+      "kind": "none"
+    },
+    "instructions": "You are a read-only project-status route. For every request that asks to show or read the current project status, return exactly this JSON object and nothing else: {\"operation\":\"read-project-status\",\"status\":\"available\"}. Never call tools and never perform an action.",
+    "temperature": 0,
+    "reasoningEffort": "none",
+    "maxOutputTokens": 512,
+    "requestTimeoutMs": 120000,
+    "maxRequestBytes": 1048576,
+    "maxResponseBytes": 4194304
+  },
+  "capture": {
+    "maxCases": 64,
+    "maxDatasetBytes": 33554432,
+    "maxRecordBytes": 1048576,
+    "maxWorkloadBytes": 67108864,
+    "maxManifestBytes": 16777216,
+    "normalizationUsage": {
+      "inputTokens": 0,
+      "outputTokens": 0
+    }
+  }
+}
