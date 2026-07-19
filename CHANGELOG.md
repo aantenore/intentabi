@@ -7,6 +7,12 @@ source-alpha and follows semantic-versioned prereleases.
 
 ### Added
 
+- Added a deterministic CLINC150 external normalizer pilot with pinned source
+  provenance, train/validation-to-registry and test/OOS-to-held-out split
+  isolation, explicit equivalent/distinct comparisons, and content-free
+  SemWitness reports.
+- Added an injectable SemWitness proposal compiler boundary while keeping the
+  declarative operation registry authoritative for typed intent and effect.
 - Added a resumable, config-driven OpenAI-compatible capture app that writes
   atomic per-case observations and deterministically assembles the existing
   cache-impact workload only after host-oracle matches.
@@ -16,6 +22,12 @@ source-alpha and follows semantic-versioned prereleases.
 
 ### Fixed
 
+- Fail closed on external compiler errors, malformed proposals, unknown
+  operations, registry/compiler disagreement, and non-read effects.
+- Bind external pilot reports to deployment revision, credential identity,
+  compiler manifest, registry, corpus, pinned evaluator, and attempt policy;
+  validate compiler configuration without a model call and reject the example
+  deployment placeholder on execution.
 - Validate raw provider usage before SDK normalization and reject missing,
   partial, or inconsistent counters instead of recording synthetic zeroes.
 - Bind resumable records to host-owned deployment and credential identities,

@@ -4,9 +4,10 @@
 
 People can ask for the same thing in many ways, so an exact-text cache misses useful reuse. A naive
 "similar meaning" cache is worse: it can return an answer from the wrong route, user scope, data
-version, or authorization context. **IntentABI measures whether explicitly known alternate
-phrasings can converge on the same typed intent while the real application continues to answer
-normally. It collects evidence before anyone turns a semantic cache on.**
+version, or authorization context. **IntentABI measures whether different phrasings can converge
+on the same typed intent while the real application continues to answer normally. It now tests a
+normalizer on frozen external language held out from its configured aliases before anyone turns a
+semantic cache on.**
 
 ### A concrete example
 
@@ -23,16 +24,17 @@ betting production correctness on a similarity threshold.
 | -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Shadow-only passthrough                | Teams can study candidate reuse without changing application answers or bypassing the normal route.         |
 | Typed intent and route bindings        | Equivalent wording is not enough; evidence stays tied to the intended operation, scope, and deployment.     |
-| Content-free authenticated evidence    | Experiments can be audited without placing prompts, outputs, or cached values in telemetry.                 |
+| Authenticated shadow evidence          | Runtime experiments can be audited without placing prompts, outputs, or cached values in telemetry.         |
 | Resumable provider capture             | Interrupted local or remote model measurements continue from atomic per-case records instead of restarting. |
+| External normalizer pilot              | A frozen CLINC150 split checks held-out read requests, out-of-catalogue bypasses, and false intent merges.  |
 | Raw-versus-normalized cache-impact lab | Teams can see workload-specific safe-hit and token differences instead of relying on a sales claim.         |
 | Counterbalanced qualification runs     | Baseline and candidate paths can be compared in both orders to reduce simple ordering bias.                 |
 | Explicit activation boundary           | A positive experiment remains evidence, not permission to serve cached content.                             |
 
 > **Maturity:** IntentABI is alpha, source-checkout-only, and shadow-only. It currently evaluates
-> configured equivalences and bounded experiments; it does not prove broad paraphrase recall,
-> production cache safety, lower latency, or general token savings. It never activates a cache or
-> authorizes a cached response.
+> configured equivalences, an English external conformance slice, and bounded experiments; it does
+> not prove production-traffic coverage, production cache safety, lower latency, or general token
+> savings. It never activates a cache or authorizes a cached response.
 
 ## Technical scope
 
@@ -82,6 +84,15 @@ is bound to host-declared deployment and credential identities, raw token usage
 fails closed before SDK normalization can hide missing fields, and artifact
 budgets are preflighted before the first provider call.
 
+The External Normalizer Pilot fills a different gap: it injects an
+OpenAI-compatible SemWitness compiler while a declarative registry remains the
+authority for typed operations and effects. A frozen official CLINC150 revision
+supplies aliases only from `train`/`val` and evaluation cases only from
+`test`/`oos_test`. SemWitness performs the existing repeatability, bypass,
+convergence, and false-merge evaluation. The result is external conformance
+evidence only; it explicitly denies statistical qualification, economic
+qualification, promotion, and activation.
+
 ## Why This Exists
 
 Semantic caching is valuable only after equivalence, scope, authorization,
@@ -100,6 +111,9 @@ candidate or infrastructure payloads through this API.
 This alpha proves a narrow contract:
 
 - exact configured aliases can converge through SemWitness;
+- an external compiler can propose operations for text held out from configured
+  aliases while the trusted registry still owns the resulting Intent IR and
+  effect;
 - a trusted operation-to-route binding prevents measuring intent A against
   executed input B;
 - an untrusted nomination store can report only `found`/`not found`, and a hit
@@ -110,11 +124,12 @@ This alpha proves a narrow contract:
 - evidence is emitted in an authenticated, content-free envelope.
 
 It does **not** prove broad paraphrase recall, production cache safety, general
-token savings, lower model latency, or safe prompt rewriting. The cache-impact
-lab can measure workload-specific hit and token deltas, but its report declares
-statistical readiness false. The Codex path is deliberately passthrough-only
-until held-out task and provider-usage evidence passes the existing SemWitness
-gates.
+token savings, lower model latency, or safe prompt rewriting. The external
+pilot measures classification conformance on a frozen public English slice,
+while the cache-impact lab can measure workload-specific hit and token deltas.
+Neither report claims statistical readiness. The Codex path is deliberately
+passthrough-only until held-out task and provider-usage evidence passes the
+existing SemWitness gates.
 
 ## Run the Source Alpha
 
@@ -163,6 +178,49 @@ For a reproducible read-only contract smoke against an installed Agentic SDLC
 checkout, set `AGENTIC_SDLC_ENTRYPOINT`, `AGENTIC_SDLC_ROOT`, and a host-derived
 `AGENTIC_SDLC_DEPLOYMENT_REVISION_DIGEST`, then run
 `pnpm smoke:agentic-sdlc`.
+
+## Test an External Intent Normalizer
+
+This stage answers a concrete question: can a chosen normalizer recognize ways
+of asking for 12 read operations that were held out from its configured aliases,
+keep different operations apart, and refuse requests outside that catalogue?
+
+Download the exact pinned CLINC150 source, then validate 128 cases and 192
+declared comparisons without calling a model:
+
+```bash
+curl --fail --location \
+  --output /tmp/clinc150-data-full.json \
+  https://raw.githubusercontent.com/clinc/oos-eval/828f8093932c8fe6ca7936c3d2e52903b1c523de/data/data_full.json
+
+pnpm pilot validate \
+  --config config/clinc150-normalizer-pilot.json \
+  --source /tmp/clinc150-data-full.json
+```
+
+To evaluate the configured OpenAI-compatible compiler, first replace its
+deployment digest and endpoint/model settings. Use an empty destination inside
+an owner-only directory and grant both execution and network consent:
+
+```bash
+pnpm pilot run \
+  --config config/clinc150-normalizer-pilot.json \
+  --source /tmp/clinc150-data-full.json \
+  --out /absolute/private/path/normalizer-report.json \
+  --execute \
+  --allow-network
+```
+
+Exit `0` means the SemWitness conformance gate passed; exit `2` is a valid
+failed evaluation, including compiler/provider failures captured per case;
+exit `1` is an input, configuration, orchestration, or publication failure. All
+outcomes remain content-free, shadow-only, statistically and economically
+unqualified, and unable to authorize cache activation. See the
+[CLINC150 external normalizer pilot](docs/clinc150-normalizer-pilot.md).
+
+The current evaluator is deliberately one-shot. The full example plans 256
+compiler requests; an interrupted run must be restarted. Progress records and
+resume are an open gate before release or pinning.
 
 ## Run the Cache Impact Lab
 
@@ -294,6 +352,7 @@ packages/store-memory            metadata-only development nomination store
 apps/cli                         first Agentic SDLC host composition
 apps/codex-bench                 opt-in Codex SDK research composition
 apps/diagnostic-capture          resumable OpenAI-compatible usage capture
+apps/normalizer-pilot            frozen external intent-normalizer conformance
 apps/qualification               offline SemWitness qualification handoff
 ```
 
@@ -308,6 +367,7 @@ Read [architecture](docs/architecture.md),
 [threat model](docs/threat-model.md),
 [landscape](docs/landscape.md),
 [cache-impact lab](docs/cache-impact-lab.md),
+[CLINC150 external normalizer pilot](docs/clinc150-normalizer-pilot.md),
 [diagnostic provider capture](docs/diagnostic-capture.md), and
 [Codex integration boundary](docs/codex-integration.md) before extending the
 alpha.
@@ -319,7 +379,8 @@ Codex submission, transparent composer interception, production multi-tenant
 store, or npm release. The runtime and cache-impact core remain provider-free;
 the separate, explicit-execution capture and Codex benchmark apps may call a
 configured model only for diagnostics. The exact-alias fixture proves
-contracts and arithmetic; it is not a claim of universal natural-language
-equivalence.
+contracts and arithmetic. The CLINC150 pilot adds external English
+classification evidence, not a claim of universal natural-language
+equivalence, deployment-IID safety, or cost savings.
 
 Apache-2.0.

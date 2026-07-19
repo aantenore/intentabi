@@ -9,7 +9,9 @@ an active cache or duplicating SemWitness.
 
 It does **not** demonstrate broad paraphrase equivalence, production cache
 safety, token savings, lower model latency, transparent Codex prompt rewriting,
-or an installable npm release. Those require held-out and operational evidence.
+or an installable npm release. The external CLINC150 pilot adds reproducible
+English conformance evidence, but those claims still require representative
+deployment and operational evidence.
 
 ## Acceptance Criteria
 
@@ -138,3 +140,35 @@ value loop without weakening the active-cache prohibition.
       positive net token delta; exit `2` preserves valid negative evidence.
 - [x] CLI inputs use shared bounded, stable, non-symlink file reads and closed
       schemas.
+
+## External Normalizer Pilot Increment
+
+The [CLINC150 external normalizer pilot](clinc150-normalizer-pilot.md) tests a
+replaceable SemWitness proposal compiler on language that is absent from the
+trusted registry aliases. It is a separate quality stage, not cache-impact or
+promotion evidence.
+
+- [x] External compiler injection preserves exact-alias compatibility and
+      compiles each observation once.
+- [x] The declarative registry remains authoritative for operation-to-IntentIR
+      and effect resolution; unknown, conflicting, malformed, failed, and
+      side-effecting proposals bypass.
+- [x] Compiler manifest and exact registry configuration are bound into adapter
+      lineage.
+- [x] The official CLINC150 source is pinned by full revision and SHA-256; its
+      selected test/OOS phrases cannot enter registry aliases.
+- [x] The checked-in configuration deterministically selects 128 English cases
+      across 12 read labels and 192 explicit equivalent/distinct comparisons.
+- [x] Validation makes zero compiler calls; execution requires `--execute` and
+      `--allow-network`; artifacts are atomically owner-only and no-clobber.
+- [x] SemWitness remains the sole evaluator for exact intent, bypass,
+      repeatability, convergence, unsafe accepts, and false merges.
+- [x] Every artifact denies statistical qualification, economic qualification,
+      promotion, and activation regardless of the conformance result.
+- [ ] Add representative Italian and deployment-specific held-out evidence.
+- [ ] Observe compiler token cost and latency separately before making an
+      economic claim.
+- [ ] Add independently sampled deployment evidence large enough for the
+      declared statistical safety bound before any release or pin decision.
+- [ ] Persist content-free per-attempt progress and resume without duplicate
+      compiler calls before any release or pin decision.

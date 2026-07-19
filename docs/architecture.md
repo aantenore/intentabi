@@ -109,6 +109,24 @@ corpus/binding digests, then parses the exact emitted JSONL bytes and decides
 qualification. IntentABI retains no duplicate fixture in the result and has no
 policy, repair, network, provider, store, cache, or candidate-content path.
 
+The adapter can also receive an external `IntentProposalCompiler`. This port is
+candidate generation only: the snapshotted declarative registry still resolves
+the operation into trusted Intent IR, owns the effect, and enforces the exact
+operation-to-route binding. The compiler is invoked once per observation.
+Failures, malformed or unknown proposals, registry/compiler ontology
+disagreement, and non-read effects bypass measurement. Compiler manifest plus
+registry configuration are included in the adapter lineage digest.
+
+The separate `apps/normalizer-pilot` composition uses that compiler boundary
+for external conformance. It deterministically prepares a frozen CLINC150
+registry and held-out fixture, delegates evaluation to SemWitness, and writes a
+content-free private report. It does not run the application route, measure
+cache value, produce promotion evidence, or authorize activation.
+Its run binding covers source/registry/corpus digests, compiler manifest,
+host-declared deployment and credential identities, pinned SemWitness evaluator,
+attempts, and request count. The current evaluation is one-shot; durable
+per-attempt progress and resume remain a release gate.
+
 ### Agentic SDLC
 
 - `FixtureAgenticSdlcRoute` is deterministic and used for conformance.
