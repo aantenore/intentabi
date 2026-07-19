@@ -1,14 +1,10 @@
 import { createHash } from "node:crypto";
-import type { BigIntStats } from "node:fs";
-import { lstat, mkdir, realpath } from "node:fs/promises";
-import { join, resolve } from "node:path";
 
 import {
-  CliIoError,
-  readBoundedRegularFile,
-  reservePrivateArtifact,
-  type PrivateArtifactReservation,
-} from "@intentabi/cli-io";
+  openPrivateRunStore,
+  PrivateRunStoreError,
+  type PrivateRunStorePartition,
+} from "@intentabi/private-run-store";
 import { z } from "zod";
 
 import {
@@ -226,26 +222,36 @@ export function assertDiagnosticArtifactBudgets(
   }
 }
 
-export async function captureDiagnosticPilot(input: {
+export interface DiagnosticCaptureInput {
   readonly config: DiagnosticCaptureConfig;
   readonly dataset: DiagnosticCaptureDataset;
   readonly runDirectory: string;
   readonly runner: DiagnosticProviderRunner;
   readonly limit?: number;
-}): Promise<DiagnosticCaptureResult> {
+}
+
+export async function captureDiagnosticPilot(
+  input: DiagnosticCaptureInput,
+): Promise<DiagnosticCaptureResult> {
+  try {
+    return await captureDiagnosticPilotWithStore(input);
+  } catch (error) {
+    if (error instanceof PrivateRunStoreError) {
+      throw new DiagnosticCaptureError();
+    }
+    throw error;
+  }
+}
+
+async function captureDiagnosticPilotWithStore(
+  input: DiagnosticCaptureInput,
+): Promise<DiagnosticCaptureResult> {
   assertDiagnosticArtifactBudgets(input.config, input.dataset);
-  const privateRunDirectory = await ensurePrivateDirectory(input.runDirectory);
-  const privateRecordsDirectory = await ensurePrivateDirectory(
-    join(privateRunDirectory.path, "records"),
-    privateRunDirectory,
-  );
-  const layout: PrivateCaptureLayout = Object.freeze({
-    run: privateRunDirectory,
-    records: privateRecordsDirectory,
+  const store = await openPrivateRunStore({
+    path: input.runDirectory,
+    partitions: ["records"],
   });
-  await assertPrivateLayout(layout);
-  const runDirectory = privateRunDirectory.path;
-  const recordsDirectory = privateRecordsDirectory.path;
+  const recordsStore = store.partition("records");
   const configDigest = sha256Canonical(input.config);
   const datasetDigest = sha256Canonical(input.dataset);
   const endpointDigest = sha256Text(
@@ -264,11 +270,10 @@ export async function captureDiagnosticPilot(input: {
       configDigest,
       datasetDigest,
     });
-    const recordPath = join(recordsDirectory, recordName(ordinal, item.id));
     const existing = await readOptionalRecord(
-      recordPath,
+      recordName(ordinal, item.id),
       input.config.capture.maxRecordBytes,
-      layout,
+      recordsStore,
     );
     if (existing !== null) {
       assertRecordBinding(existing, expected, input.config, endpointDigest);
@@ -279,7 +284,7 @@ export async function captureDiagnosticPilot(input: {
     if (capturedThisRun >= limit) continue;
 
     try {
-      const observation = await guardedLayout(layout, () =>
+      const observation = await store.guard(() =>
         input.runner.run(item.source),
       );
       const record = createRecord({
@@ -289,16 +294,14 @@ export async function captureDiagnosticPilot(input: {
         observation,
       });
       const bytes = serialize(record);
-      const reservation = await reserveGuardedArtifact(
-        layout,
-        recordPath,
-        input.config.capture.maxRecordBytes,
-      );
-      try {
-        await guardedLayout(layout, () => reservation.commit(bytes));
-      } catch (error) {
-        await reservation.abort();
-        throw error;
+      if (
+        (await recordsStore.create(
+          recordName(ordinal, item.id),
+          bytes,
+          input.config.capture.maxRecordBytes,
+        )) !== "created"
+      ) {
+        throw new DiagnosticCaptureError();
       }
       records.push(record);
       capturedThisRun += 1;
@@ -314,7 +317,7 @@ export async function captureDiagnosticPilot(input: {
     (record) => !record.oracle.matched,
   ).length;
   if (remainingCases > 0) {
-    await assertPrivateLayout(layout);
+    await store.assertStable();
     return result({
       complete: false,
       workloadProduced: false,
@@ -333,11 +336,10 @@ export async function captureDiagnosticPilot(input: {
   if (oracleMismatches === 0) {
     const workload = createWorkload(input.dataset, records);
     workloadDigest = sha256Canonical(workload);
-    await publishOrVerify(
-      join(runDirectory, "cache-impact-workload.json"),
+    await store.root.publishOrVerify(
+      "cache-impact-workload.json",
       serialize(workload),
       input.config.capture.maxWorkloadBytes,
-      layout,
     );
     workloadProduced = true;
   }
@@ -351,13 +353,12 @@ export async function captureDiagnosticPilot(input: {
     oracleMismatches,
     workloadDigest,
   });
-  await publishOrVerify(
-    join(runDirectory, "diagnostic-capture-manifest.json"),
+  await store.root.publishOrVerify(
+    "diagnostic-capture-manifest.json",
     serialize(manifest),
     input.config.capture.maxManifestBytes,
-    layout,
   );
-  await assertPrivateLayout(layout);
+  await store.assertStable();
 
   return result({
     complete: true,
@@ -523,26 +524,15 @@ function createManifest(input: {
 }
 
 async function readOptionalRecord(
-  path: string,
+  name: string,
   maximumBytes: number,
-  layout: PrivateCaptureLayout,
+  partition: PrivateRunStorePartition,
 ): Promise<DiagnosticCaptureRecord | null> {
-  const state = await guardedLayout(layout, () =>
-    lstat(path).catch((error: unknown) => {
-      if (hasCode(error, "ENOENT")) return null;
-      throw new DiagnosticCaptureError();
-    }),
-  );
-  if (state === null) return null;
   try {
+    const bytes = await partition.readOptional(name, maximumBytes);
+    if (bytes === null) return null;
     return captureRecordSchema.parse(
-      JSON.parse(
-        new TextDecoder("utf-8", { fatal: true }).decode(
-          await guardedLayout(layout, () =>
-            readBoundedRegularFile(path, maximumBytes),
-          ),
-        ),
-      ),
+      JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
     );
   } catch {
     throw new DiagnosticCaptureError();
@@ -600,193 +590,6 @@ function assertDenseRecords(
   }
 }
 
-async function publishOrVerify(
-  path: string,
-  bytes: Uint8Array,
-  maximumBytes: number,
-  layout: PrivateCaptureLayout,
-): Promise<void> {
-  const existing = await guardedLayout(layout, () =>
-    lstat(path).catch((error: unknown) => {
-      if (hasCode(error, "ENOENT")) return null;
-      throw new DiagnosticCaptureError();
-    }),
-  );
-  if (existing !== null) {
-    try {
-      const current = await guardedLayout(layout, () =>
-        readBoundedRegularFile(path, maximumBytes),
-      );
-      if (!Buffer.from(current).equals(Buffer.from(bytes))) {
-        throw new DiagnosticCaptureError();
-      }
-      return;
-    } catch {
-      throw new DiagnosticCaptureError();
-    }
-  }
-  try {
-    const reservation = await reserveGuardedArtifact(
-      layout,
-      path,
-      maximumBytes,
-    );
-    try {
-      await guardedLayout(layout, () => reservation.commit(bytes));
-    } catch (error) {
-      await reservation.abort();
-      throw error;
-    }
-  } catch (error) {
-    if (error instanceof CliIoError) throw new DiagnosticCaptureError();
-    throw error;
-  }
-}
-
-interface PrivateDirectoryIdentity {
-  readonly path: string;
-  readonly dev: bigint;
-  readonly ino: bigint;
-}
-
-interface PrivateCaptureLayout {
-  readonly run: PrivateDirectoryIdentity;
-  readonly records: PrivateDirectoryIdentity;
-}
-
-async function ensurePrivateDirectory(
-  path: string,
-  expectedParent?: PrivateDirectoryIdentity,
-): Promise<PrivateDirectoryIdentity> {
-  const absolute = resolve(path);
-  if (expectedParent !== undefined) {
-    await assertSamePrivateDirectory(expectedParent);
-  }
-
-  const initial = await lstatOptional(absolute);
-  if (initial === null) {
-    await mkdir(absolute, { recursive: true, mode: 0o700 }).catch(() => {
-      throw new DiagnosticCaptureError();
-    });
-  } else {
-    assertPrivateDirectory(initial);
-  }
-
-  if (expectedParent !== undefined) {
-    await assertSamePrivateDirectory(expectedParent);
-  }
-  const beforeRealpath = await lstatPrivateDirectory(absolute);
-  if (initial !== null && !sameDirectory(initial, beforeRealpath)) {
-    throw new DiagnosticCaptureError();
-  }
-
-  const canonical = await realpath(absolute).catch(() => {
-    throw new DiagnosticCaptureError();
-  });
-  const [canonicalState, pathAfterRealpath] = await Promise.all([
-    lstatPrivateDirectory(canonical),
-    lstatPrivateDirectory(absolute),
-  ]);
-  if (
-    !sameDirectory(beforeRealpath, canonicalState) ||
-    !sameDirectory(beforeRealpath, pathAfterRealpath)
-  ) {
-    throw new DiagnosticCaptureError();
-  }
-  if (expectedParent !== undefined) {
-    await assertSamePrivateDirectory(expectedParent);
-  }
-  return Object.freeze({
-    path: canonical,
-    dev: canonicalState.dev,
-    ino: canonicalState.ino,
-  });
-}
-
-async function lstatOptional(path: string): Promise<BigIntStats | null> {
-  try {
-    return await lstat(path, { bigint: true });
-  } catch (error) {
-    if (hasCode(error, "ENOENT")) return null;
-    throw new DiagnosticCaptureError();
-  }
-}
-
-async function lstatPrivateDirectory(path: string): Promise<BigIntStats> {
-  const state = await lstat(path, { bigint: true }).catch(() => {
-    throw new DiagnosticCaptureError();
-  });
-  assertPrivateDirectory(state);
-  return state;
-}
-
-function assertPrivateDirectory(state: BigIntStats): void {
-  if (
-    !state.isDirectory() ||
-    state.isSymbolicLink() ||
-    (process.platform !== "win32" && Number(state.mode & 0o077n) !== 0) ||
-    (typeof process.getuid === "function" &&
-      state.uid !== BigInt(process.getuid()))
-  ) {
-    throw new DiagnosticCaptureError();
-  }
-}
-
-async function assertSamePrivateDirectory(
-  expected: PrivateDirectoryIdentity,
-): Promise<void> {
-  const current = await lstatPrivateDirectory(expected.path);
-  if (!sameDirectory(expected, current)) {
-    throw new DiagnosticCaptureError();
-  }
-}
-
-async function assertPrivateLayout(
-  layout: PrivateCaptureLayout,
-): Promise<void> {
-  await assertSamePrivateDirectory(layout.run);
-  await assertSamePrivateDirectory(layout.records);
-  await assertSamePrivateDirectory(layout.run);
-}
-
-async function guardedLayout<T>(
-  layout: PrivateCaptureLayout,
-  operation: () => Promise<T>,
-): Promise<T> {
-  await assertPrivateLayout(layout);
-  try {
-    const value = await operation();
-    await assertPrivateLayout(layout);
-    return value;
-  } catch (error) {
-    await assertPrivateLayout(layout);
-    throw error;
-  }
-}
-
-async function reserveGuardedArtifact(
-  layout: PrivateCaptureLayout,
-  path: string,
-  maximumBytes: number,
-): Promise<PrivateArtifactReservation> {
-  await assertPrivateLayout(layout);
-  const reservation = await reservePrivateArtifact(path, maximumBytes);
-  try {
-    await assertPrivateLayout(layout);
-    return reservation;
-  } catch (error) {
-    await reservation.abort();
-    throw error;
-  }
-}
-
-function sameDirectory(
-  left: Readonly<{ dev: bigint; ino: bigint }>,
-  right: Readonly<{ dev: bigint; ino: bigint }>,
-): boolean {
-  return left.dev === right.dev && left.ino === right.ino;
-}
-
 function recordName(ordinal: number, id: string): string {
   return `${String(ordinal).padStart(5, "0")}-${id}.json`;
 }
@@ -832,14 +635,6 @@ function result(
     activationAuthorized: false,
     ...value,
   });
-}
-
-function hasCode(error: unknown, code: string): boolean {
-  return (
-    error !== null &&
-    typeof error === "object" &&
-    Object.getOwnPropertyDescriptor(error, "code")?.value === code
-  );
 }
 
 export class DiagnosticCaptureError extends Error {

@@ -157,6 +157,23 @@ export interface PrivateArtifactReservation {
 }
 
 /**
+ * Copy a real Uint8Array without consulting overridable properties or its
+ * iterator. The copy is made synchronously and is bounded before allocation.
+ */
+export function snapshotBoundedBytes(
+  bytes: Uint8Array,
+  maximumBytes: number,
+): Uint8Array {
+  assertMaximumBytes(maximumBytes);
+  const byteLength = intrinsicUint8ArrayByteLength(bytes);
+  if (byteLength === null) throw new CliIoError("INVALID_POLICY");
+  if (byteLength > maximumBytes) throw new CliIoError("OUTPUT_TOO_LARGE");
+  const snapshot = copyUint8Array(bytes, byteLength);
+  if (snapshot === null) throw new CliIoError("INVALID_POLICY");
+  return snapshot;
+}
+
+/**
  * Reserve a private sibling before expensive work, then publish a complete,
  * synced 0600 artifact through a no-clobber hard link. The final path is never
  * visible with partial content.

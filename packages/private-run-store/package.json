@@ -1,8 +1,8 @@
 {
-  "name": "@intentabi/diagnostic-capture",
+  "name": "@intentabi/private-run-store",
   "version": "0.2.0-alpha.2",
   "private": true,
-  "description": "Resumable OpenAI-compatible provider capture for IntentABI diagnostic workloads.",
+  "description": "Stable private run directories and append-only artifacts for IntentABI compositions.",
   "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
   "homepage": "https://github.com/aantenore/intentabi#readme",
   "bugs": {
@@ -11,20 +11,16 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/aantenore/intentabi.git",
-    "directory": "apps/diagnostic-capture"
+    "directory": "packages/private-run-store"
   },
   "keywords": [
-    "agentic-ai",
-    "diagnostic",
-    "intent-normalization",
-    "llm-evaluation",
-    "openai-compatible"
+    "append-only",
+    "atomic-write",
+    "resumable",
+    "typescript"
   ],
   "type": "module",
   "license": "Apache-2.0",
-  "bin": {
-    "intentabi-diagnostic-capture": "./dist/bin.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -44,10 +40,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "3.0.7",
-    "@intentabi/cli-io": "workspace:*",
-    "@intentabi/private-run-store": "workspace:*",
-    "ai": "7.0.22",
-    "zod": "4.4.3"
+    "@intentabi/cli-io": "workspace:*"
   }
 }
