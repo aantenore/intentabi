@@ -53,9 +53,10 @@ export class PrivateRunStoreError extends Error {
 }
 
 /**
- * Opens an owner-private run directory and its declared child partitions.
- * Every returned operation verifies the captured directory identities before
- * and after filesystem work so callers can safely resume append-only runs.
+ * Opens a run directory and its declared child partitions. POSIX modes and UID
+ * are owner-private; Windows deployments must provide an equivalently private
+ * ACL. Every operation verifies captured directory identities before and after
+ * filesystem work so callers can safely resume append-only runs.
  */
 export async function openPrivateRunStore(
   input: OpenPrivateRunStoreInput,

@@ -19,7 +19,7 @@ deployment and operational evidence.
 - [x] Core has no provider/application-specific composition schema.
 - [x] Strict, controlled-namespace, shadow-only host configuration.
 - [x] SemWitness consumed through public exports at immutable commit
-      `de1e30509fdcf92f021dc0db06f3fa6ad1d48c80` (`v0.6.0-alpha.1`).
+      `dc306c653f86ea6c33a46514d44de20a39caa97b` (`v0.7.0-alpha.1`).
 - [x] Trusted operation-to-route-input binding; mismatches bypass measurement.
 - [x] Ordinary Agentic SDLC route always executes and solely determines output.
 - [x] Nomination store cannot return content; positive probes stay unverified;
@@ -170,5 +170,6 @@ promotion evidence.
       economic claim.
 - [ ] Add independently sampled deployment evidence large enough for the
       declared statistical safety bound before any release or pin decision.
-- [ ] Persist content-free per-attempt progress and resume without duplicate
-      compiler calls before any release or pin decision.
+- [x] Persist owner-private, content-free per-attempt claims and checkpoints;
+      resume completed work without duplicate compiler calls and fail-stop on
+      indeterminate claimed attempts.

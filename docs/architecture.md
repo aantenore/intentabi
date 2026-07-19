@@ -124,8 +124,10 @@ content-free private report. It does not run the application route, measure
 cache value, produce promotion evidence, or authorize activation.
 Its run binding covers source/registry/corpus digests, compiler manifest,
 host-declared deployment and credential identities, pinned SemWitness evaluator,
-attempts, and request count. The current evaluation is one-shot; durable
-per-attempt progress and resume remain a release gate.
+attempts, and request count. Durable per-attempt claims and checkpoints resume
+completed work without duplicate compiler calls. A claim without a checkpoint
+is permanently indeterminate and is never retried implicitly; the final
+artifact appears only after complete evaluation.
 
 ### Agentic SDLC
 

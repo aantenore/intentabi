@@ -20,6 +20,12 @@ The CLI's scope labels come from configuration, not request JSON. They are still
 deployment labels, not authentication. A production host must derive current
 principal and authorization state from its authenticated context.
 
+Private run storage enforces owner UID and `0700`/`0600` modes on POSIX. On
+Windows it still rejects path substitution, symlinks, link aliases, mutation,
+and oversized records, but Node does not expose an equivalent ACL assertion;
+the deployment must provide an ACL-restricted run root under a dedicated
+account.
+
 ## Threats and Controls
 
 | Threat                              | Current control                                                                                                              | Residual risk                                                                                         |
@@ -58,6 +64,8 @@ principal and authorization state from its authenticated context.
 | Cache-impact metric fabrication     | report labels workload and usage as unattested and freshness as unmodeled; activation stays forbidden                        | a trusted host can still submit false counters or value digests                                       |
 | Detached qualification authority    | exact JSONL is reparsed and independently re-evaluated; identity, ordered records, and plan cells must match                 | a compromised pinned SemWitness evaluator remains inside the trusted computing base                   |
 | External benchmark leakage          | CLINC aliases use train/val only; held-out uses test/OOS; normalized overlap is rejected; source revision and SHA are pinned | public test text may have appeared in model pretraining and is not deployment-IID                     |
+| Normalizer duplicate execution      | exact run binding plus atomic pre-call claims and immutable content-free checkpoints; completed slots resume without calls   | a claim without a checkpoint is permanently indeterminate and needs explicit operator resolution      |
+| Normalizer checkpoint substitution  | POSIX owner modes, bounded canonical records, no symlinks/hard-link aliases, inode guards, exact slot digests                | same-UID processes remain trusted; Windows ACL privacy is inherited from the deployment               |
 | Qualification artifact race         | trusted owner-only parent, hidden `0600` sibling, inode/link checks, fsync, atomic no-clobber publication                    | a malicious same-UID process remains inside the local filesystem trust boundary                       |
 
 ## Key Handling

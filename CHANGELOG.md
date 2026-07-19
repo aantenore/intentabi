@@ -19,6 +19,22 @@ source-alpha and follows semantic-versioned prereleases.
 - Added explicit reasoning-budget failure classification, provider usage and
   reasoning digests, and machine-readable non-qualification/non-activation
   labels on every record and manifest.
+- Added owner-private append-only normalizer evaluation claims and checkpoints,
+  bounded per-invocation progress, zero-call replay, recovery of fully published
+  records after lost acknowledgement, and fail-stop handling for attempts whose
+  outcome is indeterminate.
+
+### Changed
+
+- Upgraded the normalizer-pilot config and artifact contracts to `v1alpha2`,
+  replaced one-shot `--out` with resumable `--run-dir`, added optional
+  `--limit` plus `maxCheckpointBytes`, and publish the final artifact only after
+  every planned observation completes.
+- Source-alpha TypeScript callers now pass `runDirectory` instead of
+  `outputPath` and handle the `incomplete | indeterminate | complete`
+  discriminated execution result instead of receiving an artifact directly.
+- Pinned SemWitness `v0.7.0-alpha.1` at immutable revision
+  `dc306c653f86ea6c33a46514d44de20a39caa97b` for its checkpoint-aware evaluator.
 
 ### Fixed
 

@@ -68,23 +68,27 @@ pnpm pilot validate \
 ```
 
 Before execution, bind `deploymentRevisionDigest` to the exact compiler
-deployment and configure any OpenAI-compatible endpoint/model. The destination
-must not exist and its parent must be an owner-only directory:
+deployment and configure any OpenAI-compatible endpoint/model. Use a dedicated
+owner-only run directory, or an equivalently ACL-restricted directory on
+Windows. `--limit` bounds new observations for this invocation; repeat the same
+command to resume:
 
 ```bash
 pnpm pilot run \
   --config config/clinc150-normalizer-pilot.json \
   --source /absolute/path/data_full.json \
-  --out /absolute/private/path/normalizer-report.json \
+  --run-dir /absolute/private/path/normalizer-pilot-run \
+  --limit 32 \
   --execute \
   --allow-network
 ```
 
-The output is atomically published with no-clobber owner-only permissions. It
-contains SemWitness metrics and opaque digests, not the selected utterances.
-Exit `0` means the conformance gate passed, `2` means a valid evaluation failed
-the gate (including compiler/provider failures captured per case), and `1`
-means input, configuration, orchestration, or publication failure.
+The directory stores only owner-private claims, checkpoints, opaque bindings,
+and—after completion—the final `normalizer-pilot-artifact.json`. It does not
+store selected utterances. Exit `0` means bounded progress was saved or the
+complete conformance gate passed; `2` means a complete valid evaluation failed
+the gate; `1` means input/orchestration failure or an indeterminate claimed
+attempt. Incomplete and indeterminate runs never publish a final artifact.
 
 The compiler is invoked once per attempt. Its proposal cannot supply Intent IR
 or change an effect: the declarative registry resolves both. Unknown,
@@ -94,12 +98,17 @@ The report's `pilotRunBindingDigest` covers source, registry, corpus, compiler
 manifest, host-declared deployment revision, credential identity, evaluator
 revision, attempts, and request count. The example deployment digest is a
 placeholder: validation reports `executionReady: false`, and execution rejects
-it before reserving output or calling the model.
+it before creating run state or calling the model.
 
-This alpha run is one-shot. The full configuration makes 256 compiler requests;
-there is no progress artifact or resume yet, and an interrupted evaluation must
-restart. Resumable append-only observations are a release/pin gate, not a
-capability claimed by this increment.
+The full configuration makes 256 compiler requests. Each attempt is atomically
+claimed before the compiler call and durably checkpointed afterward. The run
+binding covers source, corpus, compiler manifest, deployment, credential
+identity, SemWitness revision, split, and attempt count; drift is rejected
+before another provider call. Completed checkpoints resume without duplicate
+calls, including a zero-call `--limit 0` replay. If a process loses certainty
+after a claim but before a durable checkpoint, the slot becomes indeterminate
+and is never retried automatically. Representative deployment evidence remains
+the release and pin gate.
 
 ## Observed local diagnostic
 

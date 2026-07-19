@@ -20,16 +20,16 @@ whether measured token usage improved. It never returns the candidate cached val
 IntentABI is for AI platform teams evaluating intent normalization and semantic caching without
 betting production correctness on a similarity threshold.
 
-| Feature                                | Practical benefit                                                                                           |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Shadow-only passthrough                | Teams can study candidate reuse without changing application answers or bypassing the normal route.         |
-| Typed intent and route bindings        | Equivalent wording is not enough; evidence stays tied to the intended operation, scope, and deployment.     |
-| Authenticated shadow evidence          | Runtime experiments can be audited without placing prompts, outputs, or cached values in telemetry.         |
-| Resumable provider capture             | Interrupted local or remote model measurements continue from atomic per-case records instead of restarting. |
-| External normalizer pilot              | A frozen CLINC150 split checks held-out read requests, out-of-catalogue bypasses, and false intent merges.  |
-| Raw-versus-normalized cache-impact lab | Teams can see workload-specific safe-hit and token differences instead of relying on a sales claim.         |
-| Counterbalanced qualification runs     | Baseline and candidate paths can be compared in both orders to reduce simple ordering bias.                 |
-| Explicit activation boundary           | A positive experiment remains evidence, not permission to serve cached content.                             |
+| Feature                                | Practical benefit                                                                                                |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Shadow-only passthrough                | Teams can study candidate reuse without changing application answers or bypassing the normal route.              |
+| Typed intent and route bindings        | Equivalent wording is not enough; evidence stays tied to the intended operation, scope, and deployment.          |
+| Authenticated shadow evidence          | Runtime experiments can be audited without placing prompts, outputs, or cached values in telemetry.              |
+| Resumable provider capture             | Interrupted local or remote model measurements continue from atomic per-case records instead of restarting.      |
+| Resumable external normalizer pilot    | A frozen CLINC150 split resumes per attempt while checking held-out reads, catalogue bypasses, and false merges. |
+| Raw-versus-normalized cache-impact lab | Teams can see workload-specific safe-hit and token differences instead of relying on a sales claim.              |
+| Counterbalanced qualification runs     | Baseline and candidate paths can be compared in both orders to reduce simple ordering bias.                      |
+| Explicit activation boundary           | A positive experiment remains evidence, not permission to serve cached content.                                  |
 
 > **Maturity:** IntentABI is alpha, source-checkout-only, and shadow-only. It currently evaluates
 > configured equivalences, an English external conformance slice, and bounded experiments; it does
@@ -135,7 +135,7 @@ existing SemWitness gates.
 
 Requirements: Node.js 24+ and pnpm 11. The packages are intentionally private
 and source-checkout-only while SemWitness is pinned to the immutable commit for
-the `v0.6.0-alpha.1` prerelease.
+the `v0.7.0-alpha.1` prerelease.
 
 ```bash
 pnpm install --frozen-lockfile
@@ -199,28 +199,38 @@ pnpm pilot validate \
 ```
 
 To evaluate the configured OpenAI-compatible compiler, first replace its
-deployment digest and endpoint/model settings. Use an empty destination inside
-an owner-only directory and grant both execution and network consent:
+deployment digest and endpoint/model settings. Use a dedicated owner-only run
+directory (or an equivalently ACL-restricted directory on Windows) and grant
+both execution and network consent. `--limit` bounds only
+the new compiler observations made by this invocation, so the command resumes
+the same bound run directory:
 
 ```bash
 pnpm pilot run \
   --config config/clinc150-normalizer-pilot.json \
   --source /tmp/clinc150-data-full.json \
-  --out /absolute/private/path/normalizer-report.json \
+  --run-dir /absolute/private/path/normalizer-pilot-run \
+  --limit 32 \
   --execute \
   --allow-network
 ```
 
-Exit `0` means the SemWitness conformance gate passed; exit `2` is a valid
-failed evaluation, including compiler/provider failures captured per case;
-exit `1` is an input, configuration, orchestration, or publication failure. All
-outcomes remain content-free, shadow-only, statistically and economically
-unqualified, and unable to authorize cache activation. See the
+Exit `0` means bounded progress was saved or the SemWitness conformance gate
+passed; exit `2` is a complete valid evaluation that failed the gate; exit `1`
+includes input/orchestration failure and an indeterminate claimed attempt that
+is deliberately not retried. The final artifact is published only after every
+observation completes. All outcomes remain content-free, shadow-only,
+statistically and economically unqualified, and unable to authorize cache
+activation. See the
 [CLINC150 external normalizer pilot](docs/clinc150-normalizer-pilot.md).
 
-The current evaluator is deliberately one-shot. The full example plans 256
-compiler requests; an interrupted run must be restarted. Progress records and
-resume are an open gate before release or pinning.
+The full example plans 256 compiler requests. Before each call, the pilot
+atomically claims its opaque evaluation slot; afterward it durably commits a
+content-free checkpoint. Re-running the same bound directory skips completed
+slots, rejects source/deployment/credential/compiler drift before another
+provider call, and publishes a byte-stable final artifact. A claim without a
+checkpoint is indeterminate and is never leased or retried implicitly.
+Representative deployment evidence remains the release and pin gate.
 
 ## Run the Cache Impact Lab
 
@@ -348,6 +358,7 @@ packages/adapter-codex-sdk       pinned Thread factory and passthrough adapter
 packages/benchmark-core          paired runs and raw-vs-normalized impact metrics
 packages/qualification-core      provider-neutral plan/authority/receipt core
 packages/cli-io                  bounded reads and atomic private publication
+packages/private-run-store       owner-only append-only run state and recovery
 packages/store-memory            metadata-only development nomination store
 apps/cli                         first Agentic SDLC host composition
 apps/codex-bench                 opt-in Codex SDK research composition
