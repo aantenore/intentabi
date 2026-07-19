@@ -1,5 +1,40 @@
 # IntentABI
 
+## What this changes in the real world
+
+People can ask for the same thing in many ways, so an exact-text cache misses useful reuse. A naive
+"similar meaning" cache is worse: it can return an answer from the wrong route, user scope, data
+version, or authorization context. **IntentABI measures whether explicitly known alternate
+phrasings can converge on the same typed intent while the real application continues to answer
+normally. It collects evidence before anyone turns a semantic cache on.**
+
+### A concrete example
+
+An application is configured to treat "show unpaid invoices" and "list invoices not yet paid" as
+the same read operation. IntentABI observes the candidate key in shadow mode, binds it to the exact
+route and deployment revision, and still sends the original request through the ordinary route. Its
+offline lab then reports whether the normalized key would have created a safe additional hit and
+whether measured token usage improved. It never returns the candidate cached value to the user.
+
+IntentABI is for AI platform teams evaluating intent normalization and semantic caching without
+betting production correctness on a similarity threshold.
+
+| Feature                                | Practical benefit                                                                                       |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Shadow-only passthrough                | Teams can study candidate reuse without changing application answers or bypassing the normal route.     |
+| Typed intent and route bindings        | Equivalent wording is not enough; evidence stays tied to the intended operation, scope, and deployment. |
+| Content-free authenticated evidence    | Experiments can be audited without placing prompts, outputs, or cached values in telemetry.             |
+| Raw-versus-normalized cache-impact lab | Teams can see workload-specific safe-hit and token differences instead of relying on a sales claim.     |
+| Counterbalanced qualification runs     | Baseline and candidate paths can be compared in both orders to reduce simple ordering bias.             |
+| Explicit activation boundary           | A positive experiment remains evidence, not permission to serve cached content.                         |
+
+> **Maturity:** IntentABI is alpha, source-checkout-only, and shadow-only. It currently evaluates
+> configured equivalences and bounded experiments; it does not prove broad paraphrase recall,
+> production cache safety, lower latency, or general token savings. It never activates a cache or
+> authorizes a cached response.
+
+## Technical scope
+
 IntentABI is a provider-agnostic **shadow qualification host** for measuring
 whether different user phrasings can safely converge on the same typed intent
 beside a real application route. It never serves candidate content, skips the
