@@ -89,6 +89,24 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
 
+  apps/guarded-reuse:
+    dependencies:
+      "@intentabi/cli-io":
+        specifier: workspace:*
+        version: link:../../packages/cli-io
+      "@intentabi/core":
+        specifier: workspace:*
+        version: link:../../packages/core
+      "@intentabi/guarded-reuse":
+        specifier: workspace:*
+        version: link:../../packages/guarded-reuse
+      semwitness:
+        specifier: github:aantenore/semwitness#dc306c653f86ea6c33a46514d44de20a39caa97b
+        version: https://codeload.github.com/aantenore/semwitness/tar.gz/dc306c653f86ea6c33a46514d44de20a39caa97b
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
   apps/normalizer-pilot:
     dependencies:
       "@intentabi/cli-io":
@@ -175,6 +193,15 @@ importers:
       zod:
         specifier: 4.4.3
         version: 4.4.3
+
+  packages/guarded-reuse:
+    dependencies:
+      "@intentabi/core":
+        specifier: workspace:*
+        version: link:../core
+      semwitness:
+        specifier: github:aantenore/semwitness#dc306c653f86ea6c33a46514d44de20a39caa97b
+        version: https://codeload.github.com/aantenore/semwitness/tar.gz/dc306c653f86ea6c33a46514d44de20a39caa97b
 
   packages/private-run-store:
     dependencies:

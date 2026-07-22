@@ -20,6 +20,12 @@ The CLI's scope labels come from configuration, not request JSON. They are still
 deployment labels, not authentication. A production host must derive current
 principal and authorization state from its authenticated context.
 
+The guarded observation-reuse study goes further only as a conformance fixture.
+Its tenant, principal, authorization, context, policy, dependency, value-oracle,
+and clock inputs are deterministic synthetic host bindings. They are not current
+authorization, deployment attestation, or trusted time. Public SGD annotations
+act as an external-label oracle and do not prove learned-normalizer quality.
+
 Private run storage enforces owner UID and `0700`/`0600` modes on POSIX. On
 Windows it still rejects path substitution, symlinks, link aliases, mutation,
 and oversized records, but Node does not expose an equivalent ACL assertion;
@@ -68,6 +74,16 @@ account.
 | Normalizer checkpoint substitution  | POSIX owner modes, bounded canonical records, no symlinks/hard-link aliases, inode guards, exact slot digests                | same-UID processes remain trusted; Windows ACL privacy is inherited from the deployment               |
 | Qualification artifact race         | trusted owner-only parent, hidden `0600` sibling, inode/link checks, fsync, atomic no-clobber publication                    | a malicious same-UID process remains inside the local filesystem trust boundary                       |
 
+### Guarded study-specific threats
+
+| Threat                           | Current control                                                                                                                               | Residual risk                                                                                 |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Guarded key treated as authority | SemWitness derives the complete observation key and still runs `admitCacheHit` after every candidate read                                     | a modified host can skip admission; this study has no serving adapter                         |
+| Host binding substitution        | admission checks bound identity, authorization, context, policy, effect, dependencies, and separate freshness state; drift misses or bypasses | synthetic host bindings are not proof of current deployment state                             |
+| Stale/conflicting observation    | TTL/revision admission, freshness eviction, unsafe/hostile quarantine, and host value oracle; non-read effects are ineligible before lookup   | deterministic clock/value inputs are unattested; production invalidation is absent            |
+| Report forgery                   | domain-separated HMAC covers the content-free report and key ID                                                                               | every shared-key verifier can forge; HMAC is not a signature or independent producer identity |
+| Conformance overclaim            | statistical/economic qualification are false and serving/activation authority is none                                                         | 56 public cases cannot establish a production error bound or distribution coverage            |
+
 ## Key Handling
 
 The HMAC secret comes from a configured environment variable, is copied into
@@ -79,6 +95,11 @@ scope-epoch changes intentionally break longitudinal equality linkage.
 No raw prompt, output, semantic SHA digest, or scope label is used as a fallback
 identifier. Failures before trusted bindings exist use constant
 `unavailable:*` sentinels; HMAC failure suppresses the evidence envelope.
+
+The guarded-reuse report MAC has the same shared-secret limitation: it detects
+mutation for parties that already trust and hold the key, but is not a digital
+signature. It must not be published or interpreted as third-party provenance,
+approval, current authorization, freshness, or permission to serve a value.
 
 The Codex host also forbids raw candidate/proof material in evidence. Candidate
 and original text plus safe SemWitness metadata become scope-bound HMACs; proof

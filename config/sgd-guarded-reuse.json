@@ -1,0 +1,134 @@
+{
+  "schema": "io.github.aantenore.intentabi/sgd-guarded-reuse-config/v1alpha1",
+  "mode": "shadow",
+  "source": {
+    "kind": "google-schema-guided-dialogue",
+    "repository": "google-research-datasets/dstc8-schema-guided-dialogue",
+    "revision": "e852981ae34990f4358979625854259302feaa78",
+    "schema": {
+      "path": "test/schema.json",
+      "sha256": "sha256:0b4af32e01695aec4788681fe6b22fb7ee908907269f5ac7167d01f4c4132bcb"
+    },
+    "dialogues": {
+      "path": "test/dialogues_001.json",
+      "sha256": "sha256:1fa13b0fe607100bc66ed15e0490df9c52a2cec087ca9733e0f506755eef0ada"
+    },
+    "selector": {
+      "seed": "sgd-guarded-reuse-v1",
+      "manifestSha256": "sha256:bbca78806558e2c396c3faf304db445cfc12bc102272be56b663cc9a2816611f",
+      "families": [
+        {
+          "id": "hotels-search-empty",
+          "service": "Hotels_4",
+          "intent": "SearchHotel",
+          "slots": {},
+          "requestedSlots": [],
+          "effect": "read",
+          "available": 42,
+          "take": 29
+        },
+        {
+          "id": "hotels-search-london",
+          "service": "Hotels_4",
+          "intent": "SearchHotel",
+          "slots": {
+            "location": ["London"]
+          },
+          "requestedSlots": [],
+          "effect": "read",
+          "available": 2,
+          "take": 2
+        },
+        {
+          "id": "hotels-search-room-star",
+          "service": "Hotels_4",
+          "intent": "SearchHotel",
+          "slots": {
+            "number_of_rooms": ["1"],
+            "star_rating": ["3"]
+          },
+          "requestedSlots": [],
+          "effect": "read",
+          "available": 2,
+          "take": 2
+        },
+        {
+          "id": "hotels-search-smoking",
+          "service": "Hotels_4",
+          "intent": "SearchHotel",
+          "slots": {
+            "smoking_allowed": ["True"]
+          },
+          "requestedSlots": [],
+          "effect": "read",
+          "available": 3,
+          "take": 3
+        },
+        {
+          "id": "hotels-search-star",
+          "service": "Hotels_4",
+          "intent": "SearchHotel",
+          "slots": {
+            "star_rating": ["3"]
+          },
+          "requestedSlots": [],
+          "effect": "read",
+          "available": 4,
+          "take": 4
+        },
+        {
+          "id": "music-lookup-empty",
+          "service": "Music_3",
+          "intent": "LookupMusic",
+          "slots": {},
+          "requestedSlots": [],
+          "effect": "read",
+          "available": 8,
+          "take": 8
+        },
+        {
+          "id": "restaurants-reserve-empty",
+          "service": "Restaurants_2",
+          "intent": "ReserveRestaurant",
+          "slots": {},
+          "requestedSlots": [],
+          "effect": "write",
+          "available": 9,
+          "take": 8
+        }
+      ]
+    }
+  },
+  "study": {
+    "keyId": "sgd-guarded-reuse-v1",
+    "hmacSecretEnv": "INTENTABI_GUARDED_REUSE_HMAC_SECRET",
+    "locale": "en-US",
+    "normalizationPolicyDigest": "sha256:55f7223dc08a6d91114a3d517c0b43b5232759ae95fde0573b0758af639ea95c",
+    "cachePolicyDigest": "sha256:8ed1170f47825f1f6f2cd551cd40f7cf1d25bbbe65661897d39c44bd9ab8fb7c",
+    "ttl": {
+      "createdAtEpochMs": 1000000,
+      "ttlMs": 1000,
+      "freshOffsetMs": 999,
+      "staleOffsetMs": 1000
+    },
+    "revisionNamespace": "sgd-source",
+    "requiredScenarios": [
+      "equivalent-paraphrase",
+      "tenant-drift",
+      "principal-drift",
+      "authorization-drift",
+      "context-drift",
+      "policy-drift",
+      "plan-drift",
+      "execution-drift",
+      "tool-drift",
+      "ttl-fresh",
+      "ttl-stale",
+      "revision-equivalent",
+      "revision-drift",
+      "transactional-effect",
+      "return-after-conflict",
+      "hostile-store-substitution"
+    ]
+  }
+}

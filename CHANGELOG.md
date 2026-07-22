@@ -3,10 +3,15 @@
 All notable changes to this project are documented here. The project is still
 source-alpha and follows semantic-versioned prereleases.
 
-## Unreleased
+## 0.3.0-alpha.1 - 2026-07-22
 
 ### Added
 
+- Added a shadow-only guarded observation-reuse study that compares independent
+  exact-request, unguarded oracle-intent, and SemWitness-admitted strategies.
+- Added an offline, deterministic 56-case Schema-Guided Dialogue conformance
+  slice covering read-only paraphrases, host-binding drift, freshness,
+  transactional effects, return-after-conflict, and hostile-store substitution.
 - Added a deterministic CLINC150 external normalizer pilot with pinned source
   provenance, train/validation-to-registry and test/OOS-to-held-out split
   isolation, explicit equivalent/distinct comparisons, and content-free
@@ -26,6 +31,10 @@ source-alpha and follows semantic-versioned prereleases.
 
 ### Changed
 
+- Delegated guarded cache-key derivation and every post-read admission decision
+  to SemWitness while keeping IntentABI responsible only for case orchestration,
+  host value checks, unsafe/hostile-candidate quarantine, freshness/revision
+  eviction, metrics, and report authentication.
 - Upgraded the normalizer-pilot config and artifact contracts to `v1alpha2`,
   replaced one-shot `--out` with resumable `--run-dir`, added optional
   `--limit` plus `maxCheckpointBytes`, and publish the final artifact only after
@@ -49,6 +58,17 @@ source-alpha and follows semantic-versioned prereleases.
 - Bind resumable records to host-owned deployment and credential identities,
   reject redirected run directories, and preflight every persisted-artifact
   budget before a provider call.
+
+### Safety
+
+- Limited the guarded profile to `read` observations; non-read effects are
+  ineligible before lookup or insertion. Unsafe or hostile candidates quarantine
+  their key; freshness- or revision-invalid candidates are evicted, and other
+  admission bypasses fail closed without mutating a stable entry.
+- Guarded reports explicitly deny serving, activation, application, promotion,
+  statistical qualification, and economic qualification. Their HMAC is
+  symmetric authentication, not a producer signature; host bindings, value
+  oracle, and clock remain synthetic and unattested in the SGD suite.
 
 ## 0.2.0-alpha.2 - 2026-07-17
 

@@ -3,36 +3,38 @@
 ## What this changes in the real world
 
 People can ask for the same thing in many ways, so an exact-text cache misses useful reuse. A naive
-"similar meaning" cache is worse: it can return an answer from the wrong route, user scope, data
-version, or authorization context. **IntentABI measures whether different phrasings can converge
-on the same typed intent while the real application continues to answer normally. It now tests a
-normalizer on frozen external language held out from its configured aliases before anyone turns a
-semantic cache on.**
+"similar meaning" cache is worse: it can return an answer from the wrong tenant, user, permission,
+tool version, or moment in time. **IntentABI measures whether different phrasings can converge on
+the same typed intent and whether a previous read-only tool observation would still pass all of
+those boundaries. The real application continues to answer normally: this project never serves the
+candidate value.**
 
 ### A concrete example
 
-An application is configured to treat "show unpaid invoices" and "list invoices not yet paid" as
-the same read operation. IntentABI observes the candidate key in shadow mode, binds it to the exact
-route and deployment revision, and still sends the original request through the ordinary route. Its
-offline lab then reports whether the normalized key would have created a safe additional hit and
-whether measured token usage improved. It never returns the candidate cached value to the user.
+An agent asks a read-only hotel-search tool for the same information twice using different words.
+An exact-text cache misses the second request; an intent-only cache may wrongly reuse a result from
+another principal or stale tool revision. IntentABI compares both baselines with a candidate
+guarded by SemWitness, then records whether tenant, principal, authorization, context, policy, tool,
+execution, freshness, and value still agree. A reservation or other write remains ineligible, and
+the observation is never returned to the agent.
 
 IntentABI is for AI platform teams evaluating intent normalization and semantic caching without
 betting production correctness on a similarity threshold.
 
-| Feature                                | Practical benefit                                                                                                |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Shadow-only passthrough                | Teams can study candidate reuse without changing application answers or bypassing the normal route.              |
-| Typed intent and route bindings        | Equivalent wording is not enough; evidence stays tied to the intended operation, scope, and deployment.          |
-| Authenticated shadow evidence          | Runtime experiments can be audited without placing prompts, outputs, or cached values in telemetry.              |
-| Resumable provider capture             | Interrupted local or remote model measurements continue from atomic per-case records instead of restarting.      |
-| Resumable external normalizer pilot    | A frozen CLINC150 split resumes per attempt while checking held-out reads, catalogue bypasses, and false merges. |
-| Raw-versus-normalized cache-impact lab | Teams can see workload-specific safe-hit and token differences instead of relying on a sales claim.              |
-| Counterbalanced qualification runs     | Baseline and candidate paths can be compared in both orders to reduce simple ordering bias.                      |
-| Explicit activation boundary           | A positive experiment remains evidence, not permission to serve cached content.                                  |
+| Feature                                | Practical benefit                                                                                                       |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Shadow-only passthrough                | Teams can study candidate reuse without changing application answers or bypassing the normal route.                     |
+| Typed intent and route bindings        | Equivalent wording is not enough; evidence stays tied to the intended operation, scope, and deployment.                 |
+| Authenticated shadow evidence          | Runtime experiments can be audited without placing prompts, outputs, or cached values in telemetry.                     |
+| Resumable provider capture             | Interrupted local or remote model measurements continue from atomic per-case records instead of restarting.             |
+| Resumable external normalizer pilot    | A frozen CLINC150 split resumes per attempt while checking held-out reads, catalogue bypasses, and false merges.        |
+| Raw-versus-normalized cache-impact lab | Teams can see workload-specific safe-hit and token differences instead of relying on a sales claim.                     |
+| Guarded observation-reuse study        | Teams can test paraphrase reuse against identity, authorization, dependency, and freshness drift before a store exists. |
+| Counterbalanced qualification runs     | Baseline and candidate paths can be compared in both orders to reduce simple ordering bias.                             |
+| Explicit activation boundary           | A positive experiment remains evidence, not permission to serve cached content.                                         |
 
 > **Maturity:** IntentABI is alpha, source-checkout-only, and shadow-only. It currently evaluates
-> configured equivalences, an English external conformance slice, and bounded experiments; it does
+> configured equivalences, English external conformance slices, and bounded experiments; it does
 > not prove production-traffic coverage, production cache safety, lower latency, or general token
 > savings. It never activates a cache or authorizes a cached response.
 
@@ -74,6 +76,16 @@ hit against a host-supplied value digest, and reports safe-hit lift plus net
 input/output token deltas. It remains offline, content-free, and shadow-only.
 The report binds the exact registry bytes and inspector configuration, while
 labeling workload, usage, and freshness provenance as unattested diagnostics.
+
+The Guarded Observation Reuse study is narrower and more adversarial. It
+compares three independent strategies: exact request, unguarded oracle intent,
+and SemWitness-guarded observation reuse. SemWitness alone derives the guarded
+cache key and performs post-read admission over intent, tenant, principal,
+authorization, context, policy, effect, dependencies, and freshness. IntentABI
+only drives cases, applies a host value oracle, quarantines unsafe or hostile
+candidates, evicts freshness- or revision-invalid candidates, and reports outcomes.
+The study has no store adapter, serving path, activation manifest, or authority
+to return a cached value.
 
 The separate Diagnostic Provider Capture fills the input gap without adding a
 router or cache: it calls a configured OpenAI-compatible endpoint, compares
@@ -121,6 +133,9 @@ This alpha proves a narrow contract:
 - the ordinary route remains the only source of application output;
 - the Codex shadow host can observe a SemWitness-prepared candidate while
   submitting the original input byte-for-byte to `Thread.run`;
+- SemWitness admission can preserve useful read-only paraphrase reuse while
+  rejecting synthetic identity, authorization, dependency, effect, and
+  freshness drift; IntentABI's separate host oracle detects value mismatches;
 - evidence is emitted in an authenticated, content-free envelope.
 
 It does **not** prove broad paraphrase recall, production cache safety, general
@@ -260,6 +275,35 @@ complete report failed a safety or value gate; exit `1` means the boundary or
 execution failed. None of the three authorizes cache activation. See
 [Cache Impact Lab](docs/cache-impact-lab.md) for contracts and metric formulas.
 
+## Test Guarded Observation Reuse
+
+Download the two files from the pinned official Schema-Guided Dialogue revision,
+then run the offline study:
+
+```bash
+curl --fail --location \
+  --output /tmp/sgd-schema.json \
+  https://raw.githubusercontent.com/google-research-datasets/dstc8-schema-guided-dialogue/e852981ae34990f4358979625854259302feaa78/test/schema.json
+
+curl --fail --location \
+  --output /tmp/sgd-dialogues-001.json \
+  https://raw.githubusercontent.com/google-research-datasets/dstc8-schema-guided-dialogue/e852981ae34990f4358979625854259302feaa78/test/dialogues_001.json
+
+INTENTABI_GUARDED_REUSE_HMAC_SECRET="$(openssl rand -hex 32)" \
+  pnpm reuse:guarded \
+  --config config/sgd-guarded-reuse.json \
+  --schema /tmp/sgd-schema.json \
+  --dialogues /tmp/sgd-dialogues-001.json
+```
+
+The app verifies both source digests before parsing and emits one content-free
+event with a public selection-order digest and an authenticated shadow report.
+Exit `0` means the declared conformance gate passed, exit `2` means a complete
+report failed it, and exit `1` means the boundary or execution failed. The 56
+cases use external labels and synthetic host bindings; they do not qualify a
+learned normalizer or authorize serving. See
+[Guarded Observation Reuse](docs/guarded-observation-reuse.md).
+
 ## Capture Provider Measurements
 
 The capture app turns real OpenAI-compatible usage observations into the
@@ -346,6 +390,13 @@ content-free. See [Qualification Lab](docs/qualification-lab.md).
   route input; normalized keys keep the SemWitness policy/ontology binding;
 - expected value digests stay private, unsafe hits never save tokens, and every
   report explicitly forbids activation.
+- guarded reuse is limited to the SemWitness `observation` tier and `read`
+  effect; writes are ineligible before lookup or insertion;
+- a guarded cache key is only a lookup binding: SemWitness admission still runs
+  after every candidate read; unsafe or hostile candidates quarantine their
+  key, while freshness- or revision-invalid candidates are evicted;
+- guarded-reuse reports declare `mode: "shadow"`, `servingAuthority: "none"`,
+  `activationAuthorized: false`, `applied: false`, and no promotion manifest.
 
 ## Workspace
 
@@ -357,12 +408,14 @@ packages/codex-host              SemWitness-preparer/Codex transport host
 packages/adapter-codex-sdk       pinned Thread factory and passthrough adapter
 packages/benchmark-core          paired runs and raw-vs-normalized impact metrics
 packages/qualification-core      provider-neutral plan/authority/receipt core
+packages/guarded-reuse           three-strategy guarded observation-reuse study
 packages/cli-io                  bounded reads and atomic private publication
 packages/private-run-store       owner-only append-only run state and recovery
 packages/store-memory            metadata-only development nomination store
 apps/cli                         first Agentic SDLC host composition
 apps/codex-bench                 opt-in Codex SDK research composition
 apps/diagnostic-capture          resumable OpenAI-compatible usage capture
+apps/guarded-reuse               offline pinned-SGD guarded-reuse composition
 apps/normalizer-pilot            frozen external intent-normalizer conformance
 apps/qualification               offline SemWitness qualification handoff
 ```
@@ -373,25 +426,28 @@ isolation, and the limits of the resulting measurements. Real runs belong on a
 dedicated clean host/container/VM because system/MDM configuration and legacy
 Codex notifications cannot be neutralized absolutely from inside the process.
 
-Read [architecture](docs/architecture.md),
+Use the [documentation index](docs/README.md), or read
+[architecture](docs/architecture.md),
 [delivery contract](docs/delivery-contract.md),
 [threat model](docs/threat-model.md),
 [landscape](docs/landscape.md),
 [cache-impact lab](docs/cache-impact-lab.md),
 [CLINC150 external normalizer pilot](docs/clinc150-normalizer-pilot.md),
-[diagnostic provider capture](docs/diagnostic-capture.md), and
+[diagnostic provider capture](docs/diagnostic-capture.md),
+[guarded observation reuse](docs/guarded-observation-reuse.md), and
 [Codex integration boundary](docs/codex-integration.md) before extending the
 alpha.
 
 ## Non-goals for this alpha
 
-No embeddings, vector database, active cache, response reuse, transformed
+No embeddings, vector database, active cache, active observation/response reuse, transformed
 Codex submission, transparent composer interception, production multi-tenant
 store, or npm release. The runtime and cache-impact core remain provider-free;
 the separate, explicit-execution capture and Codex benchmark apps may call a
 configured model only for diagnostics. The exact-alias fixture proves
 contracts and arithmetic. The CLINC150 pilot adds external English
-classification evidence, not a claim of universal natural-language
-equivalence, deployment-IID safety, or cost savings.
+classification evidence; the SGD slice uses external labels to test admission
+mechanics. Neither is a claim of universal natural-language equivalence,
+deployment-IID safety, or cost savings.
 
 Apache-2.0.

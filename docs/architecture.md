@@ -67,6 +67,51 @@ The runtime strictly parses inspector and store results at runtime. Malformed
 values, unknown fields, non-read effects, route mismatches, scope mismatches,
 and unknown reason codes cannot reach observation telemetry as eligible data.
 
+## Guarded Observation-Reuse Study
+
+`@intentabi/guarded-reuse` is a provider-neutral, offline conformance driver.
+It does not extend `ShadowCandidateStore` and has no runtime serving port. The
+same ordered cases run through three isolated maps so one strategy cannot hide
+behind another:
+
+```mermaid
+flowchart LR
+  C["Ordered external cases"] --> X["Exact-request map"]
+  C --> U["Unguarded oracle-intent map"]
+  C --> K["SemWitness hmacCacheKey"]
+  K --> G["Guarded candidate map"]
+  G --> A["SemWitness admitCacheHit"]
+  X --> R["Shadow-only report"]
+  U --> R
+  A --> R
+  O["Host value oracle"] --> X
+  O --> U
+  O --> A
+  R -. "no serving or store authority" .-> N["No application output"]
+```
+
+SemWitness remains the only owner of the guarded `CacheBinding`, key derivation,
+normalization witness, freshness evaluation, and admission verdict. IntentABI
+supplies the ordered workload, a host-declared value oracle, independent
+comparators, unsafe/hostile-candidate quarantine, freshness eviction, and report
+authentication. A cache key match only nominates a candidate; `admitCacheHit`
+still runs after the read.
+
+The guarded candidate is limited to the SemWitness `observation` tier. Its
+`CacheBinding` includes intent/normalizer policy, namespace, tenant, principal,
+authorization, context, host policy, effect, plan, execution, and tool; the
+admission input separately carries entry and lookup freshness. Non-read effects
+are ineligible before map access. Binding drift normally becomes a miss; a
+same-key candidate rejected by SemWitness becomes an admission bypass. Unsafe
+or hostile candidates quarantine the key, stale/revision mismatches evict it,
+and other bypasses do not mutate a stable entry.
+
+The report is content-free and HMAC-authenticated, but its MAC is symmetric, not
+a signature. It fixes `mode: "shadow"`, `servingAuthority: "none"`,
+`activationAuthorized: false`, `applied: false`, and
+`promotionManifest: "not-produced"`. It cannot identify an independent producer
+or grant authority to activate reuse.
+
 ## Evidence Envelope
 
 Before delivery, the runtime creates a unique event ID and computes an HMAC over

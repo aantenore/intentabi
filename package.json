@@ -1,8 +1,8 @@
 {
   "name": "intentabi-workspace",
-  "version": "0.2.0-alpha.2",
+  "version": "0.3.0-alpha.1",
   "private": true,
-  "description": "Shadow-only intent normalization, cache-impact, and SemWitness qualification runtime.",
+  "description": "Shadow-only intent normalization, guarded observation reuse, cache-impact, and SemWitness qualification runtime.",
   "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
   "homepage": "https://github.com/aantenore/intentabi#readme",
   "bugs": {
@@ -40,6 +40,7 @@
     "pilot": "tsx apps/normalizer-pilot/src/bin.ts",
     "prepack": "pnpm run build",
     "qualify": "tsx apps/qualification/src/bin.ts",
+    "reuse:guarded": "tsx apps/guarded-reuse/src/bin.ts",
     "shadow": "tsx apps/cli/src/bin.ts shadow run",
     "smoke:agentic-sdlc": "pnpm run build && node scripts/smoke-agentic-sdlc.mjs",
     "test": "pnpm run build && pnpm -r --if-present run test",

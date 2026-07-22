@@ -1,0 +1,53 @@
+{
+  "name": "@intentabi/guarded-reuse-app",
+  "version": "0.3.0-alpha.1",
+  "private": true,
+  "description": "Offline Google SGD conformance runner for guarded observation reuse.",
+  "author": "Antonio Antenore <ant_ant95@hotmail.it> (https://github.com/aantenore)",
+  "homepage": "https://github.com/aantenore/intentabi#readme",
+  "bugs": {
+    "url": "https://github.com/aantenore/intentabi/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aantenore/intentabi.git",
+    "directory": "apps/guarded-reuse"
+  },
+  "keywords": [
+    "agentic-ai",
+    "cache-safety",
+    "conformance",
+    "intent-normalization",
+    "semantic-cache"
+  ],
+  "type": "module",
+  "license": "Apache-2.0",
+  "bin": {
+    "intentabi-guarded-reuse": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json",
+    "prepack": "pnpm run build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@intentabi/cli-io": "workspace:*",
+    "@intentabi/core": "workspace:*",
+    "@intentabi/guarded-reuse": "workspace:*",
+    "semwitness": "github:aantenore/semwitness#dc306c653f86ea6c33a46514d44de20a39caa97b",
+    "zod": "4.4.3"
+  }
+}
