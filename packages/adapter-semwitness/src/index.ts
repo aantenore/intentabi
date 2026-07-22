@@ -46,7 +46,7 @@ export * from "./qualification.js";
  * dataset binding silently.
  */
 export const SEMWITNESS_INTENT_INSPECTOR_IMPLEMENTATION =
-  "io.github.aantenore.intentabi/semwitness-intent-inspector/v2+semwitness-dc306c653f86ea6c33a46514d44de20a39caa97b" as const;
+  "io.github.aantenore.intentabi/semwitness-intent-inspector/v2+semwitness-b31e0e05e0bc723f918afeca9287a18af12cae9d" as const;
 
 export interface SemWitnessInspectorOptions {
   readonly registrySource: string;

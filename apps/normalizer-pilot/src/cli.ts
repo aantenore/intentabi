@@ -7,6 +7,7 @@ import { parseNormalizerPilotConfig } from "./config.js";
 import {
   createNormalizerPilotCompiler,
   executeNormalizerPilot,
+  normalizerPilotCompilerConfig,
   normalizerPilotExecutionReady,
   normalizerPilotRunBindingDigest,
   prepareNormalizerPilot,
@@ -90,19 +91,7 @@ export async function runNormalizerPilotCli(
         overrides.createCompiler ?? createNormalizerPilotCompiler
       )({
         registrySource: preparation.prepared.registrySource,
-        config: {
-          provider: {
-            name: config.compiler.provider.name,
-            baseUrl: config.compiler.provider.baseUrl,
-            model: config.compiler.provider.model,
-            ...(config.compiler.provider.environmentRef === undefined
-              ? {}
-              : {
-                  environmentRef: config.compiler.provider.environmentRef,
-                }),
-          },
-          policy: { ...config.compiler.policy },
-        },
+        config: normalizerPilotCompilerConfig(config),
         environment: Object.freeze({}),
       });
       io.stdout(

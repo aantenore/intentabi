@@ -3,6 +3,15 @@
 All notable changes to this project are documented here. The project is still
 source-alpha and follows semantic-versioned prereleases.
 
+## Unreleased
+
+### Changed
+
+- Updated the immutable SemWitness dependency to `v0.8.0-alpha.1` and exposed
+  its strictly allowlisted OpenAI-compatible `reasoningEffort` policy through
+  the external normalizer pilot. The checked-in local pilot uses `none` while
+  omission continues to preserve the endpoint default.
+
 ## 0.3.0-alpha.1 - 2026-07-22
 
 ### Added

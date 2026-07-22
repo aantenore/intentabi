@@ -109,6 +109,7 @@ export function pilotConfig() {
         maxResponseBytes: 1_048_576,
         maxOutputTokens: 128,
         maxPromptBytes: 65_536,
+        reasoningEffort: "none",
       },
     },
     evaluation: {

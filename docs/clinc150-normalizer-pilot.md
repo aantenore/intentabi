@@ -70,8 +70,12 @@ pnpm pilot validate \
 Before execution, bind `deploymentRevisionDigest` to the exact compiler
 deployment and configure any OpenAI-compatible endpoint/model. Use a dedicated
 owner-only run directory, or an equivalently ACL-restricted directory on
-Windows. `--limit` bounds new observations for this invocation; repeat the same
-command to resume:
+Windows. The optional `compiler.policy.reasoningEffort` accepts only the values
+supported by the pinned SemWitness adapter. The checked-in local pilot sets it
+to `none` so compatible reasoning models do not spend their context budget on
+hidden reasoning for this narrow classification task. Omit it to preserve the
+endpoint default. `--limit` bounds new observations for this invocation; repeat
+the same command to resume:
 
 ```bash
 pnpm pilot run \

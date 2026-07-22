@@ -19,7 +19,7 @@ deployment and operational evidence.
 - [x] Core has no provider/application-specific composition schema.
 - [x] Strict, controlled-namespace, shadow-only host configuration.
 - [x] SemWitness consumed through public exports at immutable commit
-      `dc306c653f86ea6c33a46514d44de20a39caa97b` (`v0.7.0-alpha.1`).
+      `b31e0e05e0bc723f918afeca9287a18af12cae9d` (`v0.8.0-alpha.1`).
 - [x] Trusted operation-to-route-input binding; mismatches bypass measurement.
 - [x] Ordinary Agentic SDLC route always executes and solely determines output.
 - [x] Nomination store cannot return content; positive probes stay unverified;

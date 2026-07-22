@@ -38,7 +38,8 @@
       "requestTimeoutMs": 120000,
       "maxResponseBytes": 4194304,
       "maxOutputTokens": 512,
-      "maxPromptBytes": 1048576
+      "maxPromptBytes": 1048576,
+      "reasoningEffort": "none"
     }
   },
   "evaluation": {

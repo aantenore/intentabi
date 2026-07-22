@@ -42,6 +42,6 @@
   },
   "dependencies": {
     "@intentabi/core": "workspace:*",
-    "semwitness": "github:aantenore/semwitness#dc306c653f86ea6c33a46514d44de20a39caa97b"
+    "semwitness": "github:aantenore/semwitness#b31e0e05e0bc723f918afeca9287a18af12cae9d"
   }
 }

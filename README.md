@@ -150,7 +150,7 @@ existing SemWitness gates.
 
 Requirements: Node.js 24+ and pnpm 11. The packages are intentionally private
 and source-checkout-only while SemWitness is pinned to the immutable commit for
-the `v0.7.0-alpha.1` prerelease.
+the `v0.8.0-alpha.1` prerelease.
 
 ```bash
 pnpm install --frozen-lockfile
@@ -214,9 +214,11 @@ pnpm pilot validate \
 ```
 
 To evaluate the configured OpenAI-compatible compiler, first replace its
-deployment digest and endpoint/model settings. Use a dedicated owner-only run
-directory (or an equivalently ACL-restricted directory on Windows) and grant
-both execution and network consent. `--limit` bounds only
+deployment digest and endpoint/model settings. The example sets
+`compiler.policy.reasoningEffort` to `none`; omit it to preserve the endpoint
+default or choose another strictly allowlisted SemWitness value. Use a
+dedicated owner-only run directory (or an equivalently ACL-restricted directory
+on Windows) and grant both execution and network consent. `--limit` bounds only
 the new compiler observations made by this invocation, so the command resumes
 the same bound run directory:
 

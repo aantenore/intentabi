@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OPENAI_COMPATIBLE_REASONING_EFFORTS } from "semwitness/intent/openai-compatible";
 
 import { CLINC150_REVIEWED_READ_LABELS } from "./clinc150.js";
 
@@ -74,6 +75,9 @@ export const normalizerPilotConfigSchema = z
               .int()
               .min(1_024)
               .max(1024 * 1024),
+            reasoningEffort: z
+              .enum(OPENAI_COMPATIBLE_REASONING_EFFORTS)
+              .optional(),
           })
           .strict(),
       })

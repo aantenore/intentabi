@@ -37,7 +37,7 @@ export const NORMALIZER_PILOT_ARTIFACT_NAME =
 export const NORMALIZER_PILOT_RUN_BINDING_NAME =
   "normalizer-pilot-run-binding.json" as const;
 export const NORMALIZER_PILOT_SEMWITNESS_REVISION =
-  "dc306c653f86ea6c33a46514d44de20a39caa97b" as const;
+  "b31e0e05e0bc723f918afeca9287a18af12cae9d" as const;
 
 export interface NormalizerPilotPreparation {
   readonly prepared: ReturnType<typeof prepareClinc150Pilot>;
@@ -194,7 +194,7 @@ export async function executeNormalizerPilot(input: {
   const preparation = dependencies.prepare(config, source);
   const compiler = dependencies.createCompiler({
     registrySource: preparation.prepared.registrySource,
-    config: compilerConfig(config),
+    config: normalizerPilotCompilerConfig(config),
     environment,
   });
   const manifest = snapshotCompilerManifest(compiler.manifest);
@@ -313,9 +313,10 @@ export type NormalizerPilotExecutionResult =
       artifact: NormalizerPilotArtifact;
     }>;
 
-function compilerConfig(
+export function normalizerPilotCompilerConfig(
   config: NormalizerPilotConfig,
 ): OpenAICompatibleIntentCompilerConfig {
+  const policy = config.compiler.policy;
   return Object.freeze({
     provider: Object.freeze({
       name: config.compiler.provider.name,
@@ -325,7 +326,15 @@ function compilerConfig(
         ? {}
         : { environmentRef: config.compiler.provider.environmentRef }),
     }),
-    policy: Object.freeze({ ...config.compiler.policy }),
+    policy: Object.freeze({
+      requestTimeoutMs: policy.requestTimeoutMs,
+      maxResponseBytes: policy.maxResponseBytes,
+      maxOutputTokens: policy.maxOutputTokens,
+      maxPromptBytes: policy.maxPromptBytes,
+      ...(policy.reasoningEffort === undefined
+        ? {}
+        : { reasoningEffort: policy.reasoningEffort }),
+    }),
   });
 }
 

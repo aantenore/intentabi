@@ -36,6 +36,7 @@ const valid = {
       maxResponseBytes: 1_048_576,
       maxOutputTokens: 128,
       maxPromptBytes: 65_536,
+      reasoningEffort: "none",
     },
   },
   evaluation: {
@@ -107,6 +108,27 @@ describe("normalizer pilot configuration", () => {
             ...valid.compiler.provider,
             environmentRef: "UNTRUSTED_KEY_NAME",
           },
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("accepts only SemWitness-supported reasoning effort values", () => {
+    expect(
+      parseNormalizerPilotConfig({
+        ...valid,
+        compiler: {
+          ...valid.compiler,
+          policy: { ...valid.compiler.policy, reasoningEffort: "xhigh" },
+        },
+      }).compiler.policy.reasoningEffort,
+    ).toBe("xhigh");
+    expect(() =>
+      parseNormalizerPilotConfig({
+        ...valid,
+        compiler: {
+          ...valid.compiler,
+          policy: { ...valid.compiler.policy, reasoningEffort: "unbounded" },
         },
       }),
     ).toThrow();

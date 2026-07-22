@@ -73,6 +73,13 @@ describe("normalizer pilot CLI", () => {
     expect(execute).not.toHaveBeenCalled();
     expect(prepare).toHaveBeenCalledTimes(1);
     expect(createCompiler).toHaveBeenCalledTimes(1);
+    expect(createCompiler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          policy: expect.objectContaining({ reasoningEffort: "none" }),
+        }),
+      }),
+    );
     expect(compile).not.toHaveBeenCalled();
     expect(JSON.parse(captured.stdout.join(""))).toMatchObject({
       event: "intentabi.normalizer-pilot.validated",
