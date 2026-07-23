@@ -47,7 +47,7 @@
     "@ai-sdk/openai-compatible": "3.0.7",
     "@intentabi/cli-io": "workspace:*",
     "@intentabi/private-run-store": "workspace:*",
-    "ai": "7.0.22",
+    "ai": "7.0.31",
     "zod": "4.4.3"
   }
 }
