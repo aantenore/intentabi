@@ -47,7 +47,7 @@
     "@intentabi/benchmark-core": "workspace:*",
     "@intentabi/cli-io": "workspace:*",
     "@intentabi/core": "workspace:*",
-    "@openai/codex-sdk": "0.144.4",
+    "@openai/codex-sdk": "0.144.6",
     "zod": "4.4.3"
   }
 }
