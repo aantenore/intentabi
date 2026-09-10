@@ -48,6 +48,6 @@
     "@intentabi/cli-io": "workspace:*",
     "@intentabi/core": "workspace:*",
     "@openai/codex-sdk": "0.144.4",
-    "zod": "4.4.3"
+    "zod": "4.5.4"
   }
 }
