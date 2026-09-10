@@ -48,6 +48,6 @@
     "@intentabi/cli-io": "workspace:*",
     "@intentabi/private-run-store": "workspace:*",
     "ai": "7.0.22",
-    "zod": "4.4.3"
+    "zod": "4.5.4"
   }
 }

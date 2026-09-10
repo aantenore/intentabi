@@ -52,6 +52,6 @@
     "@intentabi/cli-io": "workspace:*",
     "@intentabi/core": "workspace:*",
     "@intentabi/store-memory": "workspace:*",
-    "zod": "4.4.3"
+    "zod": "4.5.4"
   }
 }

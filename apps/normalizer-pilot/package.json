@@ -47,6 +47,6 @@
     "@intentabi/cli-io": "workspace:*",
     "@intentabi/private-run-store": "workspace:*",
     "semwitness": "github:aantenore/semwitness#b31e0e05e0bc723f918afeca9287a18af12cae9d",
-    "zod": "4.4.3"
+    "zod": "4.5.4"
   }
 }
